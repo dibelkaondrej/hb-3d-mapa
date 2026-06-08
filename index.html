@@ -23,6 +23,7 @@
   .pin.event{background:#7a3290} .pin.event::after{border-top-color:#7a3290}
   .pin.closure{background:#c43838} .pin.closure::after{border-top-color:#c43838}
   .pin.hl{background:#e8552d} .pin.hl::after{border-top-color:#e8552d}
+  .pin.camera{background:#2f6fc7} .pin.camera::after{border-top-color:#2f6fc7}
   /* easter egg: drobný emoji bez background — subtilní ikona pro objevení */
   .pin.easter{background:transparent;color:#fff;padding:0;box-shadow:none;font-size:20px;text-shadow:0 2px 4px rgba(0,0,0,.7),0 0 8px rgba(0,0,0,.5);opacity:0.85}
   .pin.easter::after{display:none}
@@ -41,6 +42,8 @@
   .pin-card.event{background:#7a3290} .pin-card.event::after{border-top-color:#7a3290} .pin-card.below.event::after{border-bottom-color:#7a3290}
   .pin-card.closure{background:#c43838} .pin-card.closure::after{border-top-color:#c43838} .pin-card.below.closure::after{border-bottom-color:#c43838}
   .pin-card.hl{background:#e8552d} .pin-card.hl::after{border-top-color:#e8552d} .pin-card.below.hl::after{border-bottom-color:#e8552d}
+  .pin-card.camera{background:#2f6fc7} .pin-card.camera::after{border-top-color:#2f6fc7} .pin-card.below.camera::after{border-bottom-color:#2f6fc7}
+  .pin-card .card-cam{width:100%;aspect-ratio:16/9;border:0;border-radius:8px;margin-top:4px;display:block;background:#000}
   .pin-card::after{content:"";position:absolute;left:var(--arrow-x,50%);bottom:-7px;transform:translateX(-50%);
     border:7px solid transparent;border-bottom:0}
   .pin-card.below::after{bottom:auto;top:-7px;border:7px solid transparent;border-top:0}
@@ -154,6 +157,13 @@
         <button data-s="winter" title="zima">❄️</button>
       </div>
       <!-- Den/noc, Počasí, mraky — skryto pro pozdější doladění. Kód v JS zachován pro budoucnost. -->
+    </div></div>
+  </div>
+
+  <div class="sec open" data-sec="layers">
+    <div class="sec-head"><span>🗺&nbsp;&nbsp;Vrstvy</span><span class="chev">▼</span></div>
+    <div class="sec-body"><div class="sec-body-inner">
+      <label class="row" style="--cat-col:#2f6fc7"><span class="row-lbl">📹&nbsp;Kamery</span><input type="checkbox" class="layerck" data-layer="camera" checked><span class="ios"></span></label>
     </div></div>
   </div>
 
@@ -689,6 +699,11 @@ async function main(){
   for(const m of buildingMeshes) occluders.push(m);   // budovy = occluders pro pin (skrýt pin za nimi)
   applyHighlight();
   document.querySelectorAll('.catck').forEach(ck=>ck.addEventListener('change',()=>{catOn[ck.dataset.cat]=ck.checked; applyHighlight();}));
+  // Vrstvy (overlay) — přepínač zapíná/vypíná všechny piny dané vrstvy (cls === data-layer)
+  document.querySelectorAll('.layerck').forEach(ck=>ck.addEventListener('change',()=>{
+    const on=ck.checked, layer=ck.dataset.layer;
+    PINS.filter(p=>p.cls===layer).forEach(p=>{ p.visible=on; if(!on && openCard && openCard.pinObj===p) hideDetail(); });
+  }));
 
   // (silnice / voda / zeleň / vrstevnice jsou už vykreslené do textury povrchu terénu výše)
 
@@ -1023,6 +1038,23 @@ async function main(){
       }
     });
   }
+  // 3) Kamera: Havlíčkovo náměstí — oficiální YouTube live stream (TIC města). Vrstva „📹 Kamery".
+  addPin(8, -165, 12, '📹 Náměstí — kamera<small>živý přenos</small>', {
+    cls:'camera',
+    detail:{
+      title:'Havlíčkovo náměstí — živě',
+      subtitle:'Oficiální kamera města (TIC)',
+      color:'#2f6fc7',
+      body:`<iframe class="card-cam" src="https://www.youtube.com/embed/69b9mUGsU8M"
+               title="Havlíčkovo náměstí živě" loading="lazy"
+               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+               allowfullscreen></iframe>
+        <div class="dtl-row"><span>Zdroj</span><span>TIC Havl. Brod</span></div>
+        <div class="dtl-row"><span>Záběr</span><span>Morový sloup · kostel</span></div>`,
+      link:'https://www.youtube.com/watch?v=69b9mUGsU8M',
+      linkText:'Otevřít na YouTube'
+    }
+  });
 
   // === ŽIVÁ MAPA: den/noc + počasí (auto default přes Open-Meteo) ============================
   const HB_GEO={lat:49.6058, lon:15.5797};
