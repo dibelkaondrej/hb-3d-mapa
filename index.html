@@ -109,6 +109,18 @@
   .nav button{width:34px;height:30px;border:0;border-radius:9px;background:rgba(255,255,255,.6);cursor:pointer;font-size:14px;line-height:1;transition:background .15s,transform .1s;padding:0}
   .nav button:hover{background:rgba(255,255,255,.95)}
   .nav button:active{transform:scale(.95)}
+  /* ozubené kolečko (FAB) — jen na mobilu, otevírá/zavírá panel */
+  #gear{position:fixed;top:14px;right:14px;width:44px;height:44px;border:0;border-radius:50%;
+    background:rgba(255,255,255,.85);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
+    box-shadow:0 2px 14px rgba(0,0,0,.12);color:#23303a;font-size:21px;line-height:44px;text-align:center;
+    padding:0;cursor:pointer;z-index:8;display:none;-webkit-user-select:none;user-select:none;transition:background .15s}
+  #gear:active{transform:scale(.94)}
+  @media (max-width:768px){
+    #gear{display:block}
+    #panel{display:none!important;top:66px;right:10px;width:200px;max-height:74vh;overflow-y:auto}
+    body.panel-open #panel{display:block!important}
+    body.panel-open #gear{background:#23303a;color:#fff}
+  }
 </style>
 </head>
 <body>
@@ -152,6 +164,7 @@
     <button id="navReset" title="reset pohledu">⟲</button>
   </div>
 </div>
+<button id="gear" title="Nastavení" aria-label="Nastavení">⚙️</button>
 <div id="err"></div>
 
 <script>
@@ -760,6 +773,13 @@ async function main(){
 
   // panel: collapsible sekce (klik na header rozbalí/zavře)
   document.querySelectorAll('#panel .sec-head').forEach(h => h.onclick = () => h.parentElement.classList.toggle('open'));
+  // ozubené kolečko (mobil): přepíná panel; klik mimo panel ho zavře
+  const gearEl=document.getElementById('gear'), panelEl=document.getElementById('panel');
+  gearEl.onclick = e => { e.stopPropagation(); document.body.classList.toggle('panel-open'); };
+  document.addEventListener('pointerdown', e => {
+    if(document.body.classList.contains('panel-open') && !panelEl.contains(e.target) && e.target!==gearEl)
+      document.body.classList.remove('panel-open');
+  });
 
   // navigace: zoom a reset s plynulou animací (easeOutCubic, ~500 ms) — pomoc pro klienty, co nezvládnou myš
   const CAM0={pos:camera.position.clone(), target:controls.target.clone()};
