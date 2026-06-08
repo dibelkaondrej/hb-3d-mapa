@@ -24,6 +24,7 @@
   .pin.closure{background:#c43838} .pin.closure::after{border-top-color:#c43838}
   .pin.hl{background:#e8552d} .pin.hl::after{border-top-color:#e8552d}
   .pin.camera{background:#2f6fc7} .pin.camera::after{border-top-color:#2f6fc7}
+  .pin.detour{background:#2c9850} .pin.detour::after{border-top-color:#2c9850}
   /* easter egg: drobný emoji bez background — subtilní ikona pro objevení */
   .pin.easter{background:transparent;color:#fff;padding:0;box-shadow:none;font-size:20px;text-shadow:0 2px 4px rgba(0,0,0,.7),0 0 8px rgba(0,0,0,.5);opacity:0.85}
   .pin.easter::after{display:none}
@@ -43,6 +44,7 @@
   .pin-card.closure{background:#c43838} .pin-card.closure::after{border-top-color:#c43838} .pin-card.below.closure::after{border-bottom-color:#c43838}
   .pin-card.hl{background:#e8552d} .pin-card.hl::after{border-top-color:#e8552d} .pin-card.below.hl::after{border-bottom-color:#e8552d}
   .pin-card.camera{background:#2f6fc7} .pin-card.camera::after{border-top-color:#2f6fc7} .pin-card.below.camera::after{border-bottom-color:#2f6fc7}
+  .pin-card.detour{background:#2c9850} .pin-card.detour::after{border-top-color:#2c9850} .pin-card.below.detour::after{border-bottom-color:#2c9850}
   .pin-card .card-cam-link{position:relative;display:block;margin-top:4px;border-radius:8px;overflow:hidden;text-decoration:none}
   .pin-card .cam-ph{width:100%;aspect-ratio:16/9;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;
     background:linear-gradient(135deg,#264a73,#0e1c2b);color:#fff}
@@ -172,6 +174,8 @@
   <div class="sec open" data-sec="layers">
     <div class="sec-head"><span>🗺&nbsp;&nbsp;Vrstvy</span><span class="chev">▼</span></div>
     <div class="sec-body"><div class="sec-body-inner">
+      <label class="row" style="--cat-col:#c43838"><span class="row-lbl">🚧&nbsp;Doprava</span><input type="checkbox" class="layerck" data-layer="traffic" checked><span class="ios"></span></label>
+      <label class="row" style="--cat-col:#7a3290"><span class="row-lbl">🎉&nbsp;Eventy</span><input type="checkbox" class="layerck" data-layer="event" checked><span class="ios"></span></label>
       <label class="row" style="--cat-col:#2f6fc7"><span class="row-lbl">📹&nbsp;Kamery</span><input type="checkbox" class="layerck" data-layer="camera" checked><span class="ios"></span></label>
     </div></div>
   </div>
@@ -383,14 +387,21 @@ function posOnPath(path,d){if(!path.total)return null;d=((d%path.total)+path.tot
   const s=path.segs[path.segs.length-1];return{p:s.b.clone(),dir:s.b.clone().sub(s.a).normalize()};}
 
 const clock=new THREE.Clock(); const updaters=[];
-const PINS=[];   // generický pin engine — pole {x,z,y,el,visible,cls,detail}
+const PINS=[];   // generický pin engine — pole {x,z,y,el,visible,cls,layer,detail}
+const OVERLAYS=[];   // 3D překryvy vrstev (např. červená uzavírka, zelená objížďka) — {mesh,layer}
+function addOverlay(mesh, layer){ mesh.userData.layer=layer; OVERLAYS.push({mesh,layer}); scene.add(mesh); return mesh; }
+// přepnutí celé vrstvy: piny (p.layer) i 3D překryvy (OVERLAYS) naráz
+function setLayer(layer, on){
+  PINS.filter(p=>p.layer===layer).forEach(p=>{ p.visible=on; if(!on && openCard && openCard.pinObj===p) hideDetail(); });
+  OVERLAYS.filter(o=>o.layer===layer).forEach(o=> o.mesh.visible=on );
+}
 let openCard=null;   // aktuálně otevřená inline karta {card,pinObj}
 let flyToCamera=null;   // hook do animateCamera (nastaví se v main())
 
 function addPin(x,z,y,html,opts={}){
   const el=document.createElement('div'); el.className='pin '+(opts.cls||'');
   el.innerHTML=html;
-  const p={x,z,y,el,visible:true,cls:opts.cls,detail:opts.detail};
+  const p={x,z,y,el,visible:true,cls:opts.cls,layer:opts.layer||opts.cls,detail:opts.detail};
   if(opts.detail){
     el.classList.add('clickable');
     el.onclick=ev=>{ ev.stopPropagation();
@@ -708,11 +719,8 @@ async function main(){
   for(const m of buildingMeshes) occluders.push(m);   // budovy = occluders pro pin (skrýt pin za nimi)
   applyHighlight();
   document.querySelectorAll('.catck').forEach(ck=>ck.addEventListener('change',()=>{catOn[ck.dataset.cat]=ck.checked; applyHighlight();}));
-  // Vrstvy (overlay) — přepínač zapíná/vypíná všechny piny dané vrstvy (cls === data-layer)
-  document.querySelectorAll('.layerck').forEach(ck=>ck.addEventListener('change',()=>{
-    const on=ck.checked, layer=ck.dataset.layer;
-    PINS.filter(p=>p.cls===layer).forEach(p=>{ p.visible=on; if(!on && openCard && openCard.pinObj===p) hideDetail(); });
-  }));
+  // Vrstvy — jeden přepínač = celá kategorie (piny + 3D překryvy). Seskupení = míň klikání.
+  document.querySelectorAll('.layerck').forEach(ck=>ck.addEventListener('change',()=>setLayer(ck.dataset.layer, ck.checked)));
 
   // (silnice / voda / zeleň / vrstevnice jsou už vykreslené do textury povrchu terénu výše)
 
@@ -1023,15 +1031,15 @@ async function main(){
       linkText:'Web pořadatele'
     }
   });
-  // 2) Uzavírka silnice: Žižkova (OSM way 9666590) — červený překryv + klikatelný pin
+  // 2) DOPRAVA (vrstva 'traffic'): uzavírka Žižkova (červeně) + objížďka Pod Radnicí (zeleně)
   const closedWay = els.find(e => e.type==='way' && e.id===9666590);
   if(closedWay){
     const closedGeo = ribbon(closedWay.geometry, 7, 0.4);
     const closedMat = new THREE.MeshBasicMaterial({color:0xd83838, transparent:true, opacity:0.72, depthWrite:false, side:THREE.DoubleSide});
-    scene.add(new THREE.Mesh(closedGeo, closedMat));
+    addOverlay(new THREE.Mesh(closedGeo, closedMat), 'traffic');
     const mid = closedWay.geometry[Math.floor(closedWay.geometry.length/2)];
     addPin(projX(mid.lon), projZ(mid.lat), 8, `🚧 Žižkova — uzavírka<small>3.-10. července, rekonstrukce</small>`, {
-      cls:'closure',
+      cls:'closure', layer:'traffic',
       detail:{
         title:'Uzavírka Žižkovy ulice',
         subtitle:'Rekonstrukce povrchu vozovky',
@@ -1044,6 +1052,24 @@ async function main(){
           <p>Po dobu uzavírky bude vjezd vozidel zakázán mimo dopravní obsluhu a IZS. Pěším průchodem se prochází.</p>`,
         link:'https://www.muhb.cz/cs/urad/aktuality/',
         linkText:'Aktuality města'
+      }
+    });
+  }
+  // 2b) Objížďka (zeleně) — Pod Radnicí (OSM way 40323716), součást vrstvy 'traffic'
+  const detourWay = els.find(e => e.type==='way' && e.id===40323716);
+  if(detourWay){
+    const detGeo = ribbon(detourWay.geometry, 6, 0.35);
+    const detMat = new THREE.MeshBasicMaterial({color:0x33b15a, transparent:true, opacity:0.62, depthWrite:false, side:THREE.DoubleSide});
+    addOverlay(new THREE.Mesh(detGeo, detMat), 'traffic');
+    const dm = detourWay.geometry[Math.floor(detourWay.geometry.length/2)];
+    addPin(projX(dm.lon), projZ(dm.lat), 7, '↪️ Objížďka<small>Pod Radnicí</small>', {
+      cls:'detour', layer:'traffic',
+      detail:{
+        title:'Objízdná trasa', subtitle:'Náhrada za uzavřenou Žižkovu', color:'#2c9850',
+        body:`
+          <div class="dtl-row"><span>Trasa</span><span>Dolní → Pod Radnicí</span></div>
+          <div class="dtl-row"><span>Platí</span><span>3.–10. července 2026</span></div>
+          <p>Objízdná trasa po dobu uzavírky Žižkovy ulice. Sledujte dopravní značení.</p>`
       }
     });
   }
