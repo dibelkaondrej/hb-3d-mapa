@@ -43,12 +43,15 @@
   .pin-card.closure{background:#c43838} .pin-card.closure::after{border-top-color:#c43838} .pin-card.below.closure::after{border-bottom-color:#c43838}
   .pin-card.hl{background:#e8552d} .pin-card.hl::after{border-top-color:#e8552d} .pin-card.below.hl::after{border-bottom-color:#e8552d}
   .pin-card.camera{background:#2f6fc7} .pin-card.camera::after{border-top-color:#2f6fc7} .pin-card.below.camera::after{border-bottom-color:#2f6fc7}
-  .pin-card .card-cam-link{position:relative;display:block;margin-top:4px;border-radius:8px;overflow:hidden;background:#000;text-decoration:none}
-  .pin-card .card-cam{width:100%;aspect-ratio:16/9;border:0;display:block;object-fit:cover}
-  .pin-card .cam-play{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:42px;height:42px;
-    border-radius:50%;background:rgba(0,0,0,.55);color:#fff;font-size:16px;display:flex;align-items:center;justify-content:center;padding-left:3px}
-  .pin-card .card-cam-link:hover .cam-play{background:rgba(207,47,47,.9)}
-  .pin-card .cam-live{position:absolute;left:7px;top:7px;background:#e0182d;color:#fff;font-size:9.5px;font-weight:700;
+  .pin-card .card-cam-link{position:relative;display:block;margin-top:4px;border-radius:8px;overflow:hidden;text-decoration:none}
+  .pin-card .cam-ph{width:100%;aspect-ratio:16/9;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;
+    background:linear-gradient(135deg,#264a73,#0e1c2b);color:#fff}
+  .pin-card .cam-ph-icon{font-size:26px;line-height:1}
+  .pin-card .cam-ph-label{font-size:11px;font-weight:600;opacity:.92}
+  .pin-card .cam-play{position:absolute;right:8px;bottom:8px;width:30px;height:30px;border-radius:50%;
+    background:rgba(255,255,255,.18);color:#fff;font-size:12px;display:flex;align-items:center;justify-content:center;padding-left:2px}
+  .pin-card .card-cam-link:hover .cam-play{background:rgba(224,24,45,.95)}
+  .pin-card .cam-live{position:absolute;left:7px;top:7px;z-index:1;background:#e0182d;color:#fff;font-size:9.5px;font-weight:700;
     letter-spacing:.4px;padding:2px 6px;border-radius:5px}
   .pin-card::after{content:"";position:absolute;left:var(--arrow-x,50%);bottom:-7px;transform:translateX(-50%);
     border:7px solid transparent;border-bottom:0}
@@ -1051,14 +1054,19 @@ async function main(){
       title:'Havlíčkovo náměstí — živě',
       subtitle:'Oficiální kamera města (TIC)',
       color:'#2f6fc7',
-      body:`<a class="card-cam-link" href="https://www.youtube.com/watch?v=69b9mUGsU8M" target="_blank" rel="noopener">
-          <img class="card-cam" src="https://img.youtube.com/vi/69b9mUGsU8M/hqdefault.jpg" alt="Havlíčkovo náměstí živě" loading="lazy">
-          <span class="cam-live">● ŽIVĚ</span><span class="cam-play">▶</span>
+      // odkaz na kanálový /live → vždy aktuální přenos (živé ID rotuje, /live nikdy nezmrtví)
+      body:`<a class="card-cam-link" href="https://www.youtube.com/channel/UC8eRoWTPlxALM729Vm854sA/live" target="_blank" rel="noopener">
+          <div class="card-cam cam-ph">
+            <span class="cam-live">● ŽIVĚ</span>
+            <span class="cam-ph-icon">📹</span>
+            <span class="cam-ph-label">Havlíčkovo náměstí</span>
+            <span class="cam-play">▶</span>
+          </div>
         </a>
-        <div class="dtl-row"><span>Zdroj</span><span>TIC Havl. Brod</span></div>
+        <div class="dtl-row"><span>Zdroj</span><span>Město HB · YouTube live</span></div>
         <div class="dtl-row"><span>Záběr</span><span>Morový sloup · kostel</span></div>`,
-      link:'https://www.youtube.com/watch?v=69b9mUGsU8M',
-      linkText:'Otevřít na YouTube'
+      link:'https://www.youtube.com/channel/UC8eRoWTPlxALM729Vm854sA/live',
+      linkText:'Otevřít živý přenos'
     }
   });
 
