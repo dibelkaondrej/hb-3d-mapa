@@ -25,6 +25,7 @@
   .pin.hl{background:#e8552d} .pin.hl::after{border-top-color:#e8552d}
   .pin.camera{background:#2f6fc7} .pin.camera::after{border-top-color:#2f6fc7}
   .pin.detour{background:#2c9850} .pin.detour::after{border-top-color:#2c9850}
+  .pin.parking{background:#3060b0} .pin.parking::after{border-top-color:#3060b0}
   /* easter egg: drobný emoji bez background — subtilní ikona pro objevení */
   .pin.easter{background:transparent;color:#fff;padding:0;box-shadow:none;font-size:20px;text-shadow:0 2px 4px rgba(0,0,0,.7),0 0 8px rgba(0,0,0,.5);opacity:0.85}
   .pin.easter::after{display:none}
@@ -45,6 +46,7 @@
   .pin-card.hl{background:#e8552d} .pin-card.hl::after{border-top-color:#e8552d} .pin-card.below.hl::after{border-bottom-color:#e8552d}
   .pin-card.camera{background:#2f6fc7} .pin-card.camera::after{border-top-color:#2f6fc7} .pin-card.below.camera::after{border-bottom-color:#2f6fc7}
   .pin-card.detour{background:#2c9850} .pin-card.detour::after{border-top-color:#2c9850} .pin-card.below.detour::after{border-bottom-color:#2c9850}
+  .pin-card.parking{background:#3060b0} .pin-card.parking::after{border-top-color:#3060b0} .pin-card.below.parking::after{border-bottom-color:#3060b0}
   .pin-card .card-cam-link{position:relative;display:block;margin-top:4px;border-radius:8px;overflow:hidden;text-decoration:none}
   .pin-card .cam-ph{width:100%;aspect-ratio:16/9;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;
     background:linear-gradient(135deg,#264a73,#0e1c2b);color:#fff}
@@ -136,6 +138,15 @@
     body.panel-open #panel{display:block!important}
     body.panel-open #gear{background:#23303a;color:#fff}
   }
+  /* vrstvy: kategorie s rozbalovacími pod-filtry (2 úrovně) */
+  .lgrp-head{display:flex;align-items:center;gap:1px}
+  .lgrp-exp{border:0;background:transparent;color:#8a9099;cursor:pointer;font-size:10px;line-height:1;padding:0 3px;flex:none;transition:transform .18s}
+  .lgrp.open .lgrp-exp{transform:rotate(90deg)}
+  .lgrp-row{flex:1}
+  .lgrp-subs{max-height:0;overflow:hidden;transition:max-height .25s ease;padding-left:15px}
+  .lgrp.open .lgrp-subs{max-height:160px}
+  .row.sub{padding-top:3px;padding-bottom:3px}
+  .row.sub .row-lbl{font-size:11px;opacity:.78}
 </style>
 </head>
 <body>
@@ -174,7 +185,18 @@
   <div class="sec open" data-sec="layers">
     <div class="sec-head"><span>🗺&nbsp;&nbsp;Vrstvy</span><span class="chev">▼</span></div>
     <div class="sec-body"><div class="sec-body-inner">
-      <label class="row" style="--cat-col:#c43838"><span class="row-lbl">🚧&nbsp;Doprava</span><input type="checkbox" class="layerck" data-layer="traffic" checked><span class="ios"></span></label>
+      <!-- Kategorie s pod-filtry: klik na šipku rozbalí detail, pilulka zapíná celou kategorii -->
+      <div class="lgrp" data-layer="traffic">
+        <div class="lgrp-head">
+          <button class="lgrp-exp" type="button" aria-label="rozbalit">▸</button>
+          <label class="row lgrp-row" style="--cat-col:#c43838"><span class="row-lbl">🚧&nbsp;Doprava</span><input type="checkbox" class="layerck" data-layer="traffic" checked><span class="ios"></span></label>
+        </div>
+        <div class="lgrp-subs">
+          <label class="row sub" style="--cat-col:#c43838"><span class="row-lbl">uzavírky</span><input type="checkbox" class="subck" data-layer="traffic" data-sub="uzavirky" checked><span class="ios"></span></label>
+          <label class="row sub" style="--cat-col:#2c9850"><span class="row-lbl">objížďky</span><input type="checkbox" class="subck" data-layer="traffic" data-sub="objizdky" checked><span class="ios"></span></label>
+          <label class="row sub" style="--cat-col:#3a7bd5"><span class="row-lbl">parkování</span><input type="checkbox" class="subck" data-layer="traffic" data-sub="parkovani" checked><span class="ios"></span></label>
+        </div>
+      </div>
       <label class="row" style="--cat-col:#7a3290"><span class="row-lbl">🎉&nbsp;Eventy</span><input type="checkbox" class="layerck" data-layer="event" checked><span class="ios"></span></label>
       <label class="row" style="--cat-col:#2f6fc7"><span class="row-lbl">📹&nbsp;Kamery</span><input type="checkbox" class="layerck" data-layer="camera" checked><span class="ios"></span></label>
     </div></div>
@@ -388,12 +410,18 @@ function posOnPath(path,d){if(!path.total)return null;d=((d%path.total)+path.tot
 
 const clock=new THREE.Clock(); const updaters=[];
 const PINS=[];   // generický pin engine — pole {x,z,y,el,visible,cls,layer,detail}
-const OVERLAYS=[];   // 3D překryvy vrstev (např. červená uzavírka, zelená objížďka) — {mesh,layer}
-function addOverlay(mesh, layer){ mesh.userData.layer=layer; OVERLAYS.push({mesh,layer}); scene.add(mesh); return mesh; }
-// přepnutí celé vrstvy: piny (p.layer) i 3D překryvy (OVERLAYS) naráz
-function setLayer(layer, on){
-  PINS.filter(p=>p.layer===layer).forEach(p=>{ p.visible=on; if(!on && openCard && openCard.pinObj===p) hideDetail(); });
-  OVERLAYS.filter(o=>o.layer===layer).forEach(o=> o.mesh.visible=on );
+const OVERLAYS=[];   // 3D překryvy vrstev — {mesh,layer,sub}
+function addOverlay(mesh, layer, sub){ mesh.userData.layer=layer; OVERLAYS.push({mesh,layer,sub}); scene.add(mesh); return mesh; }
+// 2 úrovně: kategorie (layer) + pod-filtr (sub). Stav v LAYER_STATE = {layer:{on, subs:{sub:bool}}}.
+const LAYER_STATE={};
+function layerItemOn(layer, sub){
+  const st=LAYER_STATE[layer]; if(!st) return true;       // bez registrace = vždy vidět
+  if(!st.on) return false;                                 // vypnutá celá kategorie
+  return !sub || st.subs[sub]!==false;                     // jinak rozhoduje pod-filtr
+}
+function applyLayers(){
+  for(const p of PINS){ const v=layerItemOn(p.layer,p.sub); p.visible=v; if(!v && openCard && openCard.pinObj===p) hideDetail(); }
+  for(const o of OVERLAYS){ o.mesh.visible=layerItemOn(o.layer,o.sub); }
 }
 let openCard=null;   // aktuálně otevřená inline karta {card,pinObj}
 let flyToCamera=null;   // hook do animateCamera (nastaví se v main())
@@ -401,7 +429,7 @@ let flyToCamera=null;   // hook do animateCamera (nastaví se v main())
 function addPin(x,z,y,html,opts={}){
   const el=document.createElement('div'); el.className='pin '+(opts.cls||'');
   el.innerHTML=html;
-  const p={x,z,y,el,visible:true,cls:opts.cls,layer:opts.layer||opts.cls,detail:opts.detail};
+  const p={x,z,y,el,visible:true,cls:opts.cls,layer:opts.layer||opts.cls,sub:opts.sub,detail:opts.detail};
   if(opts.detail){
     el.classList.add('clickable');
     el.onclick=ev=>{ ev.stopPropagation();
@@ -719,8 +747,16 @@ async function main(){
   for(const m of buildingMeshes) occluders.push(m);   // budovy = occluders pro pin (skrýt pin za nimi)
   applyHighlight();
   document.querySelectorAll('.catck').forEach(ck=>ck.addEventListener('change',()=>{catOn[ck.dataset.cat]=ck.checked; applyHighlight();}));
-  // Vrstvy — jeden přepínač = celá kategorie (piny + 3D překryvy). Seskupení = míň klikání.
-  document.querySelectorAll('.layerck').forEach(ck=>ck.addEventListener('change',()=>setLayer(ck.dataset.layer, ck.checked)));
+  // Vrstvy — 2 úrovně: kategorie (.layerck) + pod-filtry (.subck). Stav v LAYER_STATE, aplikace přes applyLayers().
+  document.querySelectorAll('.layerck').forEach(ck=>{ LAYER_STATE[ck.dataset.layer]={on:ck.checked, subs:{}}; });
+  document.querySelectorAll('.subck').forEach(ck=>{
+    if(!LAYER_STATE[ck.dataset.layer]) LAYER_STATE[ck.dataset.layer]={on:true,subs:{}};
+    LAYER_STATE[ck.dataset.layer].subs[ck.dataset.sub]=ck.checked;
+  });
+  document.querySelectorAll('.layerck').forEach(ck=>ck.addEventListener('change',()=>{ LAYER_STATE[ck.dataset.layer].on=ck.checked; applyLayers(); }));
+  document.querySelectorAll('.subck').forEach(ck=>ck.addEventListener('change',()=>{ LAYER_STATE[ck.dataset.layer].subs[ck.dataset.sub]=ck.checked; applyLayers(); }));
+  document.querySelectorAll('.lgrp-exp').forEach(b=>b.addEventListener('click',e=>{ e.preventDefault(); b.closest('.lgrp').classList.toggle('open'); }));
+  applyLayers();
 
   // (silnice / voda / zeleň / vrstevnice jsou už vykreslené do textury povrchu terénu výše)
 
@@ -1036,10 +1072,10 @@ async function main(){
   if(closedWay){
     const closedGeo = ribbon(closedWay.geometry, 7, 0.4);
     const closedMat = new THREE.MeshBasicMaterial({color:0xd83838, transparent:true, opacity:0.72, depthWrite:false, side:THREE.DoubleSide});
-    addOverlay(new THREE.Mesh(closedGeo, closedMat), 'traffic');
+    addOverlay(new THREE.Mesh(closedGeo, closedMat), 'traffic', 'uzavirky');
     const mid = closedWay.geometry[Math.floor(closedWay.geometry.length/2)];
     addPin(projX(mid.lon), projZ(mid.lat), 8, `🚧 Žižkova — uzavírka<small>3.-10. července, rekonstrukce</small>`, {
-      cls:'closure', layer:'traffic',
+      cls:'closure', layer:'traffic', sub:'uzavirky',
       detail:{
         title:'Uzavírka Žižkovy ulice',
         subtitle:'Rekonstrukce povrchu vozovky',
@@ -1060,16 +1096,41 @@ async function main(){
   if(detourWay){
     const detGeo = ribbon(detourWay.geometry, 6, 0.35);
     const detMat = new THREE.MeshBasicMaterial({color:0x33b15a, transparent:true, opacity:0.62, depthWrite:false, side:THREE.DoubleSide});
-    addOverlay(new THREE.Mesh(detGeo, detMat), 'traffic');
+    addOverlay(new THREE.Mesh(detGeo, detMat), 'traffic', 'objizdky');
     const dm = detourWay.geometry[Math.floor(detourWay.geometry.length/2)];
     addPin(projX(dm.lon), projZ(dm.lat), 7, '↪️ Objížďka<small>Pod Radnicí</small>', {
-      cls:'detour', layer:'traffic',
+      cls:'detour', layer:'traffic', sub:'objizdky',
       detail:{
         title:'Objízdná trasa', subtitle:'Náhrada za uzavřenou Žižkovu', color:'#2c9850',
         body:`
           <div class="dtl-row"><span>Trasa</span><span>Dolní → Pod Radnicí</span></div>
           <div class="dtl-row"><span>Platí</span><span>3.–10. července 2026</span></div>
           <p>Objízdná trasa po dobu uzavírky Žižkovy ulice. Sledujte dopravní značení.</p>`
+      }
+    });
+  }
+  // 2c) Parkování (modrá zóna) — placené stání na náměstí. Pod-filtr 'parkovani' vrstvy 'traffic'.
+  const parkWays=[30904563,105331324];
+  let parkMid=null;
+  for(const id of parkWays){
+    const w=els.find(e=>e.type==='way'&&e.id===id);
+    if(!w) continue;
+    const zGeo=ribbon(w.geometry, 9, 0.3);
+    const zMat=new THREE.MeshBasicMaterial({color:0x3a7bd5, transparent:true, opacity:0.42, depthWrite:false, side:THREE.DoubleSide});
+    addOverlay(new THREE.Mesh(zGeo, zMat), 'traffic', 'parkovani');
+    if(!parkMid) parkMid=w.geometry[Math.floor(w.geometry.length/2)];
+  }
+  if(parkMid){
+    addPin(projX(parkMid.lon), projZ(parkMid.lat), 9, '🅿️ Náměstí<small>modrá zóna</small>', {
+      cls:'parking', layer:'traffic', sub:'parkovani',
+      detail:{
+        title:'Parkování — náměstí', subtitle:'Modrá zóna · placené stání', color:'#3060b0',
+        body:`
+          <div class="dtl-row"><span>Cena</span><span>20 Kč / hod</span></div>
+          <div class="dtl-row"><span>Doba</span><span>Po–Pá 8–17, So 8–12</span></div>
+          <div class="dtl-row"><span>Kapacita</span><span>~120 míst</span></div>
+          <p>Placené stání na Havlíčkově náměstí. Platba automatem nebo mobilní aplikací.</p>`,
+        link:'https://www.muhb.cz/cs/obcan/doprava/', linkText:'Parkování ve městě'
       }
     });
   }
