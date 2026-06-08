@@ -41,7 +41,7 @@
   .pin-card.event{background:#7a3290} .pin-card.event::after{border-top-color:#7a3290} .pin-card.below.event::after{border-bottom-color:#7a3290}
   .pin-card.closure{background:#c43838} .pin-card.closure::after{border-top-color:#c43838} .pin-card.below.closure::after{border-bottom-color:#c43838}
   .pin-card.hl{background:#e8552d} .pin-card.hl::after{border-top-color:#e8552d} .pin-card.below.hl::after{border-bottom-color:#e8552d}
-  .pin-card::after{content:"";position:absolute;left:50%;bottom:-7px;transform:translateX(-50%);
+  .pin-card::after{content:"";position:absolute;left:var(--arrow-x,50%);bottom:-7px;transform:translateX(-50%);
     border:7px solid transparent;border-bottom:0}
   .pin-card.below::after{bottom:auto;top:-7px;border:7px solid transparent;border-top:0}
   .pin-card .card-close{position:absolute;top:8px;right:8px;border:0;background:rgba(255,255,255,.18);
@@ -386,6 +386,17 @@ function addPin(x,z,y,html,opts={}){
   PINS.push(p); return p;
 }
 
+// Udrží kartu vodorovně v okně i u kraje obrazovky; šipku posune tak, aby pořád mířila na pin.
+function placeCard(card, screenX, screenY){
+  const pad=12, w=card.offsetWidth||270, half=w/2;
+  let left=screenX;
+  if(left-half < pad) left = pad+half;
+  if(left+half > innerWidth-pad) left = innerWidth-pad-half;
+  card.style.left=left+'px'; card.style.top=screenY+'px';
+  let ax = screenX - (left-half);                 // pozice pinu vůči levému okraji karty
+  ax = Math.max(14, Math.min(w-14, ax));          // šipka nesmí utéct z karty
+  card.style.setProperty('--arrow-x', ax+'px');
+}
 // Detail karta NA MÍSTĚ pinu — vyroste z pozice pinu (transform-origin = spodek)
 function showDetail(d, pinObj){
   if(!d) return;
@@ -398,16 +409,16 @@ function showDetail(d, pinObj){
   if(d.body) html += `<div class="card-body">${d.body}</div>`;
   if(d.link) html += `<a class="card-link" href="${d.link}" target="_blank" rel="noopener">${d.linkText||'Více info'} →</a>`;
   card.innerHTML = html;
-  // nejdřív umístit kartu na pozici pinu + zvolit směr (nahoru / dolů) podle prostoru
+  document.body.appendChild(card);   // do DOM dřív, ať lze změřit šířku pro klampování
+  // umístit na pozici pinu + zvolit směr (nahoru/dolů) podle prostoru + udržet v okně
   const v=new THREE.Vector3(pinObj.x,pinObj.y,pinObj.z).project(camera);
   if(v.z<1){
     const screenY = (-v.y*0.5+0.5)*innerHeight, screenX = (v.x*0.5+0.5)*innerWidth;
-    card.style.left = screenX+'px'; card.style.top = screenY+'px';
     // pokud je pin v horní třetině (málo místa nad) → karta jde DOLŮ od pinu (variant .below)
     const ESTIMATED_CARD_H = 260;
     if(screenY < ESTIMATED_CARD_H + 30) card.classList.add('below');
+    placeCard(card, screenX, screenY);
   }
-  document.body.appendChild(card);
   card.querySelector('.card-close').onclick = ev => { ev.stopPropagation(); hideDetail(); };
   openCard = { card, pinObj };
   // pin se schová až po 1 frame — karta v té chvíli začíná animaci a překryje ho (žádný flash)
@@ -1176,7 +1187,8 @@ function loop(){requestAnimationFrame(loop);const dt=Math.min(clock.getDelta(),0
   // Otevřená detail karta — drží se přibitá k pozici svého pinu
   if(openCard){ const p=openCard.pinObj;
     const v=new THREE.Vector3(p.x,p.y,p.z).project(camera);
-    if(v.z<1){openCard.card.style.display='block';openCard.card.style.left=((v.x*0.5+0.5)*innerWidth)+'px';openCard.card.style.top=((-v.y*0.5+0.5)*innerHeight)+'px';}
+    if(v.z<1){openCard.card.style.display='block';
+      placeCard(openCard.card, (v.x*0.5+0.5)*innerWidth, (-v.y*0.5+0.5)*innerHeight);}
     else openCard.card.style.display='none';}
 }
 // --- interaktivita: hover budovy → zvýraznění + popup ---------------------
