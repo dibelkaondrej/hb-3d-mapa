@@ -12,6 +12,7 @@
   .tip{position:fixed;pointer-events:none;background:rgba(255,255,255,.96);color:#23303a;font-size:12px;font-weight:600;
        padding:5px 9px;border-radius:7px;white-space:nowrap;box-shadow:0 2px 10px rgba(0,0,0,.22);display:none;transform:translate(13px,13px);z-index:5}
   .tip small{display:block;font-weight:400;opacity:.7;font-size:10px}
+  .tip.touch{transform:translate(-50%,-140%);max-width:70vw;white-space:normal;text-align:center}  /* dotyk: nad prstem, vycentrovaně */
   /* generický pin (event, uzavírka, atd.) */
   .pin{position:fixed;left:0;top:0;pointer-events:none;color:#fff;font-size:12px;font-weight:600;
        padding:5px 9px;border-radius:8px;white-space:nowrap;box-shadow:0 3px 10px rgba(0,0,0,.28);
@@ -1182,36 +1183,45 @@ function loop(){requestAnimationFrame(loop);const dt=Math.min(clock.getDelta(),0
 const ray=new THREE.Raycaster(), ptr=new THREE.Vector2(), tipEl=document.getElementById('tip');
 const hoverMat=new THREE.MeshStandardMaterial({color:0xffe08a,roughness:0.5,emissive:0x4a3a10,emissiveIntensity:0.4,side:THREE.DoubleSide});  // teplý highlight (odlišný od barev kategorií)
 let hov=null;
-canvas.addEventListener('pointermove',ev=>{
+const canHover = matchMedia('(hover: hover) and (pointer: fine)').matches;   // true = myš (desktop), false = dotyk
+function clearHov(){ if(hov){ hov.material=hov.userData.base; hov=null; } }
+function showTip(html, x, y, touch){
+  tipEl.innerHTML=html; tipEl.classList.toggle('touch', !!touch);
+  tipEl.style.left=x+'px'; tipEl.style.top=y+'px'; tipEl.style.display='block';
+}
+// jádro „hoveru": zvýrazní budovu pod bodem a ukáže tooltip. touch=true → tooltip nad prstem.
+// vrací 'bell' | 'bldg' | null
+function peekAt(x, y, touch){
   const rect=canvas.getBoundingClientRect();
-  ptr.x=((ev.clientX-rect.left)/rect.width)*2-1; ptr.y=-((ev.clientY-rect.top)/rect.height)*2+1;
+  ptr.x=((x-rect.left)/rect.width)*2-1; ptr.y=-((y-rect.top)/rect.height)*2+1;
   ray.setFromCamera(ptr,camera);
-  // 1) zvonová věž má prioritu → cursor:pointer + tooltip
   if(bellTowerMeshes.length && ray.intersectObjects(bellTowerMeshes,false).length){
-    canvas.style.cursor='pointer';
-    tipEl.innerHTML='🔔 zazvonit'; tipEl.style.display='block'; tipEl.style.left=ev.clientX+'px'; tipEl.style.top=ev.clientY+'px';
-    if(hov){ hov.material=hov.userData.base; hov=null; }
-    return;
+    canvas.style.cursor='pointer'; clearHov(); showTip('🔔 zazvonit', x, y, touch); return 'bell';
   }
-  // 2) původní logika: hover budovy se službou
   const hit=ray.intersectObjects(serviceMeshes,false)[0];
   let m=hit?hit.object:null;
   let sv=m?m.userData.services.filter(s=>catOn[s.cat]):null;
   if(m&&(!sv||!sv.length)) m=null;
-  if(hov&&hov!==m){ hov.material=hov.userData.base; hov=null; }
+  if(hov&&hov!==m) clearHov();
   if(m){ if(m!==hov){ hov=m; m.material=hoverMat; }
     canvas.style.cursor='pointer';
-    tipEl.innerHTML=sv.map(s=>`${s.icon} ${s.label}${s.name?' · <b>'+s.name+'</b>':''}`).join('<br>');
-    tipEl.style.display='block'; tipEl.style.left=ev.clientX+'px'; tipEl.style.top=ev.clientY+'px';
-  } else { canvas.style.cursor=''; tipEl.style.display='none'; }
-});
-canvas.addEventListener('pointerleave',()=>{ if(hov){hov.material=hov.userData.base;hov=null;} tipEl.style.display='none'; canvas.style.cursor=''; });
-// Klik na věž Nanebevzetí → zazvonit (synthesovaný kostelní zvon)
+    showTip(sv.map(s=>`${s.icon} ${s.label}${s.name?' · <b>'+s.name+'</b>':''}`).join('<br>'), x, y, touch);
+    return 'bldg';
+  }
+  canvas.style.cursor=''; tipEl.style.display='none'; return null;
+}
+// DESKTOP: hover myší
+if(canHover){
+  canvas.addEventListener('pointermove',ev=>peekAt(ev.clientX,ev.clientY,false));
+  canvas.addEventListener('pointerleave',()=>{ clearHov(); tipEl.style.display='none'; canvas.style.cursor=''; });
+}
+// Tap/klik: zvon zazvoní; na DOTYKU navíc tap = náhrada hoveru (zvýraznění + tooltip, další tap jinam zhasne)
 canvas.addEventListener('click', ev => {
   const rect=canvas.getBoundingClientRect();
   ptr.x=((ev.clientX-rect.left)/rect.width)*2-1; ptr.y=-((ev.clientY-rect.top)/rect.height)*2+1;
   ray.setFromCamera(ptr,camera);
-  if(bellTowerMeshes.length && ray.intersectObjects(bellTowerMeshes,false).length) ringChurchBell();
+  if(bellTowerMeshes.length && ray.intersectObjects(bellTowerMeshes,false).length){ ringChurchBell(); return; }
+  if(!canHover) peekAt(ev.clientX, ev.clientY, true);   // dotyk: ukázat info o budově
 });
 
 loop(); main();
