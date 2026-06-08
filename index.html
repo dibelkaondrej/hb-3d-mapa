@@ -43,7 +43,13 @@
   .pin-card.closure{background:#c43838} .pin-card.closure::after{border-top-color:#c43838} .pin-card.below.closure::after{border-bottom-color:#c43838}
   .pin-card.hl{background:#e8552d} .pin-card.hl::after{border-top-color:#e8552d} .pin-card.below.hl::after{border-bottom-color:#e8552d}
   .pin-card.camera{background:#2f6fc7} .pin-card.camera::after{border-top-color:#2f6fc7} .pin-card.below.camera::after{border-bottom-color:#2f6fc7}
-  .pin-card .card-cam{width:100%;aspect-ratio:16/9;border:0;border-radius:8px;margin-top:4px;display:block;background:#000}
+  .pin-card .card-cam-link{position:relative;display:block;margin-top:4px;border-radius:8px;overflow:hidden;background:#000;text-decoration:none}
+  .pin-card .card-cam{width:100%;aspect-ratio:16/9;border:0;display:block;object-fit:cover}
+  .pin-card .cam-play{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:42px;height:42px;
+    border-radius:50%;background:rgba(0,0,0,.55);color:#fff;font-size:16px;display:flex;align-items:center;justify-content:center;padding-left:3px}
+  .pin-card .card-cam-link:hover .cam-play{background:rgba(207,47,47,.9)}
+  .pin-card .cam-live{position:absolute;left:7px;top:7px;background:#e0182d;color:#fff;font-size:9.5px;font-weight:700;
+    letter-spacing:.4px;padding:2px 6px;border-radius:5px}
   .pin-card::after{content:"";position:absolute;left:var(--arrow-x,50%);bottom:-7px;transform:translateX(-50%);
     border:7px solid transparent;border-bottom:0}
   .pin-card.below::after{bottom:auto;top:-7px;border:7px solid transparent;border-top:0}
@@ -1045,10 +1051,10 @@ async function main(){
       title:'Havlíčkovo náměstí — živě',
       subtitle:'Oficiální kamera města (TIC)',
       color:'#2f6fc7',
-      body:`<iframe class="card-cam" src="https://www.youtube.com/embed/69b9mUGsU8M"
-               title="Havlíčkovo náměstí živě" loading="lazy"
-               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-               allowfullscreen></iframe>
+      body:`<a class="card-cam-link" href="https://www.youtube.com/watch?v=69b9mUGsU8M" target="_blank" rel="noopener">
+          <img class="card-cam" src="https://img.youtube.com/vi/69b9mUGsU8M/hqdefault.jpg" alt="Havlíčkovo náměstí živě" loading="lazy">
+          <span class="cam-live">● ŽIVĚ</span><span class="cam-play">▶</span>
+        </a>
         <div class="dtl-row"><span>Zdroj</span><span>TIC Havl. Brod</span></div>
         <div class="dtl-row"><span>Záběr</span><span>Morový sloup · kostel</span></div>`,
       link:'https://www.youtube.com/watch?v=69b9mUGsU8M',
