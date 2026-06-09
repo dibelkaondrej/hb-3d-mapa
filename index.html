@@ -164,6 +164,39 @@
   .lgrp.open .lgrp-subs{max-height:160px}
   .row.sub{padding-top:3px;padding-bottom:3px}
   .row.sub .row-lbl{font-size:11px;opacity:.78}
+  /* shlukový badge na pinu (počet akcí) */
+  .pin .pin-badge{display:inline-flex;align-items:center;justify-content:center;min-width:16px;height:16px;margin-left:5px;
+    padding:0 4px;border-radius:9px;background:#fff;color:#7a3290;font-size:11px;font-weight:700;vertical-align:middle}
+  /* panel kulturních akcí (vpravo / na mobilu spodní sheet) */
+  #eventsPanel{position:fixed;top:14px;right:14px;width:300px;max-height:calc(100vh - 28px);display:none;flex-direction:column;
+    background:rgba(255,255,255,.92);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-radius:16px;
+    box-shadow:0 6px 28px rgba(0,0,0,.18);z-index:9;color:#23303a;overflow:hidden}
+  #eventsPanel.open{display:flex}
+  body.events-open #panel{display:none!important}   /* nepřekrývat se s panelem nastavení (taky vpravo) */
+  .ev-head{display:flex;align-items:center;justify-content:space-between;padding:13px 14px 11px;border-bottom:1px solid rgba(0,0,0,.08)}
+  .ev-title{font-weight:700;font-size:15px}
+  .ev-close{border:0;background:rgba(0,0,0,.06);width:26px;height:26px;border-radius:13px;cursor:pointer;font-size:13px;color:#3a4654}
+  .ev-list{overflow-y:auto;padding:6px}
+  .ev-item{border-radius:10px;margin-bottom:3px;transition:background .15s}
+  .ev-item:hover{background:rgba(0,0,0,.04)}
+  .ev-item.exp{background:rgba(122,50,144,.07)}
+  .ev-row{display:flex;gap:11px;align-items:center;padding:9px 9px;cursor:pointer}
+  .ev-date{display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:40px;height:40px;border-radius:9px;
+    background:#7a3290;color:#fff;line-height:1;flex:none}
+  .ev-date .ev-d{font-size:16px;font-weight:700}
+  .ev-date .ev-m{font-size:9px;text-transform:uppercase;opacity:.85;margin-top:2px}
+  .ev-name{font-size:13px;font-weight:600}
+  .ev-meta{font-size:11px;opacity:.62;margin-top:2px}
+  .ev-detail{max-height:0;overflow:hidden;transition:max-height .25s ease;padding:0 10px}
+  .ev-item.exp .ev-detail{max-height:200px;padding:0 10px 11px 60px}
+  .ev-detail p{font-size:12px;line-height:1.5;margin:0 0 8px}
+  .ev-actions{display:flex;gap:7px;flex-wrap:wrap}
+  .ev-actions a,.ev-actions .ev-fly{font-size:11px;font-weight:600;padding:6px 9px;border-radius:7px;border:0;cursor:pointer;text-decoration:none}
+  .ev-actions a{background:#7a3290;color:#fff}
+  .ev-actions .ev-fly{background:rgba(0,0,0,.07);color:#23303a}
+  @media (max-width:768px){
+    #eventsPanel{top:auto;left:0;right:0;bottom:0;width:auto;max-height:72vh;border-radius:16px 16px 0 0}
+  }
 </style>
 </head>
 <body>
@@ -235,6 +268,7 @@
   </div>
 </div>
 <button id="gear" title="Nastavení" aria-label="Nastavení">⚙️</button>
+<div id="eventsPanel"></div>
 <div id="err"></div>
 
 <script>
@@ -511,6 +545,35 @@ function poiDetail(services){
     subtitle: multi ? `${services.length} služby` : `${primary.icon} ${primary.label}`,
     color: '#3a7d6e', body: blocks
   };
+}
+// --- Kulturní akce: boční panel se seznamem (časově řazené), detail se rozbalí v něm ---
+const EV_MONTHS=['led','úno','bře','dub','kvě','čvn','čvc','srp','zář','říj','lis','pro'];
+const evDM = iso => { const [,m,d]=iso.split('-'); return `${+d}. ${EV_MONTHS[+m-1]}`; };
+let eventsPanelEl=null;
+function closeEventsPanel(){ if(eventsPanelEl){ eventsPanelEl.classList.remove('open'); document.body.classList.remove('events-open'); } }
+function openEventsPanel(title, events){
+  eventsPanelEl = eventsPanelEl || document.getElementById('eventsPanel');
+  const evs = events.slice().sort((a,b)=> a.date<b.date?-1:1);
+  const rows = evs.map((e,i)=>{
+    const [,M,D]=e.date.split('-');
+    const det = `${e.desc?`<p>${escHtml(e.desc)}</p>`:''}<div class="ev-actions">${e.link?`<a href="${escHtml(e.link)}" target="_blank" rel="noopener">${escHtml(e.linkText||'Více info')} →</a>`:''}<button class="ev-fly" data-i="${i}">📍 Ukázat na mapě</button></div>`;
+    return `<div class="ev-item" data-i="${i}">
+      <div class="ev-row"><div class="ev-date"><span class="ev-d">${+D}</span><span class="ev-m">${EV_MONTHS[+M-1]}</span></div>
+        <div class="ev-info"><div class="ev-name">${escHtml(e.title)}</div><div class="ev-meta">${escHtml(e.venue||'')}${e.time?' · '+escHtml(e.time):''}</div></div></div>
+      <div class="ev-detail">${det}</div></div>`;
+  }).join('');
+  eventsPanelEl.innerHTML = `<div class="ev-head"><span class="ev-title">${escHtml(title)}</span><button class="ev-close" aria-label="zavřít">✕</button></div><div class="ev-list">${rows}</div>`;
+  eventsPanelEl.classList.add('open'); document.body.classList.add('events-open');
+  eventsPanelEl.querySelector('.ev-close').onclick = closeEventsPanel;
+  eventsPanelEl.querySelectorAll('.ev-row').forEach(r=>r.onclick=()=>{
+    const it=r.parentElement, was=it.classList.contains('exp');
+    eventsPanelEl.querySelectorAll('.ev-item').forEach(x=>x.classList.remove('exp'));
+    if(!was) it.classList.add('exp');
+  });
+  eventsPanelEl.querySelectorAll('.ev-fly').forEach(b=>b.onclick=ev=>{ ev.stopPropagation();
+    const e=evs[+b.dataset.i];
+    if(flyToCamera) flyToCamera(new THREE.Vector3(e.x+34,46,e.z+34), new THREE.Vector3(e.x,6,e.z), 800);
+  });
 }
 // Detail karta NA MÍSTĚ pinu — vyroste z pozice pinu (transform-origin = spodek)
 function showDetail(d, pinObj){
@@ -1106,24 +1169,27 @@ async function main(){
   }
   === konec disabled easter egg === */
 
-  // === DEMO OVERLAYS: event pin + uzavírka silnice ==========================================
-  // 1) Event: Reynkovy slavnosti
-  addPin(NAMESTI.x, NAMESTI.z, 14, '🎉 Reynkovy slavnosti<small>15.-17. července 2026</small>', {
-    cls:'event',
-    detail:{
-      title:'Reynkovy slavnosti 2026',
-      subtitle:'Festival poezie · Havlíčkovo náměstí',
-      color:'#7a3290',
-      body:`
-        <div class="dtl-row"><span>Termín</span><span>15.–17. července 2026</span></div>
-        <div class="dtl-row"><span>Místo</span><span>Havlíčkovo náměstí</span></div>
-        <div class="dtl-row"><span>Vstup</span><span>zdarma</span></div>
-        <div class="dtl-row"><span>Pořadatel</span><span>Město Havl. Brod</span></div>
-        <p>Tradiční festival na počest brodského básníka a překladatele Bohuslava Reynka. Čtení, hudba, přednášky a doprovodný program v centru města.</p>`,
-      link:'https://www.muhb.cz/cs/turismus/',
-      linkText:'Web pořadatele'
-    }
-  });
+  // === DEMO OVERLAYS: kulturní akce + doprava ==========================================
+  // 1) KULTURNÍ AKCE (vrstva 'event') — shlukování blízkých akcí do 1 pinu s počtem; klik → boční panel
+  //    DATA: demo; reálný feed dodá Pecka do overlays/eventy.json (per handshake).
+  const EVENTS=[
+    {title:'Reynkovy slavnosti', date:'2026-07-15', time:'18:00', venue:'Havlíčkovo náměstí', x:NAMESTI.x,   z:NAMESTI.z,   desc:'Festival poezie na počest brodského básníka Bohuslava Reynka — čtení, hudba, přednášky.', link:'https://www.muhb.cz/cs/turismus/', linkText:'Web pořadatele'},
+    {title:'Farmářské trhy',     date:'2026-07-04', time:'8:00',  venue:'Havlíčkovo náměstí', x:NAMESTI.x-7, z:NAMESTI.z+5, desc:'Pravidelné sobotní trhy s lokálními produkty a řemesly.'},
+    {title:'Letní kino',         date:'2026-07-22', time:'21:30', venue:'Havlíčkovo náměstí', x:NAMESTI.x+7, z:NAMESTI.z-4, desc:'Promítání pod širým nebem na náměstí. Vstup zdarma.'},
+    {title:'Koncert na náměstí', date:'2026-08-02', time:'19:00', venue:'Havlíčkovo náměstí', x:NAMESTI.x+3, z:NAMESTI.z+7, desc:'Open-air koncert místních kapel.'},
+  ];
+  const evClusters=[];
+  for(const e of EVENTS){ let c=evClusters.find(c=>Math.hypot(c.x-e.x,c.z-e.z)<30); if(!c){ c={x:e.x,z:e.z,events:[]}; evClusters.push(c); } c.events.push(e); }
+  for(const c of evClusters){
+    const evs=c.events.slice().sort((a,b)=> a.date<b.date?-1:1);
+    const n=evs.length, first=evs[0];
+    const label = n>1
+      ? `🎭 Kulturní akce<b class="pin-badge">${n}</b><small>nejbližší ${evDM(first.date)}</small>`
+      : `🎭 ${first.title}<small>${evDM(first.date)}</small>`;
+    const p=addPin(c.x, c.z, 15, label, {cls:'event', layer:'event'});
+    p.el.classList.add('clickable');
+    p.el.onclick=ev=>{ ev.stopPropagation(); openEventsPanel(n>1?'🎭 Kulturní akce':first.title, evs); };
+  }
   // 2) DOPRAVA (vrstva 'traffic'): uzavírka Žižkova (červeně) + objížďka Pod Radnicí (zeleně)
   const closedWay = els.find(e => e.type==='way' && e.id===9666590);
   if(closedWay){
