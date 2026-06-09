@@ -53,10 +53,12 @@
   .pin-card .poi-item:first-child{margin-top:0;padding-top:0;border-top:0}
   .pin-card .poi-name{font-size:13px;font-weight:600;margin-bottom:3px}
   .pin-card .dtl-row a{color:#fff;text-decoration:underline}
-  .pin-card .map-btns{display:flex;gap:6px;margin-top:9px}
-  .pin-card .map-btns a{flex:1;text-align:center;background:rgba(255,255,255,.18);color:#fff;text-decoration:none;
-    font-size:11px;font-weight:600;padding:7px 4px;border-radius:7px;transition:background .15s}
-  .pin-card .map-btns a:hover{background:rgba(255,255,255,.32)}
+  .pin-card .map-btns{display:flex;gap:6px;margin-top:10px;flex-wrap:wrap}
+  .pin-card .map-btns a,.pin-card .map-btns button{flex:1;min-width:70px;text-align:center;border:0;cursor:pointer;
+    background:rgba(255,255,255,.18);color:#fff;text-decoration:none;font-size:11px;font-weight:600;padding:8px 5px;border-radius:8px;transition:filter .15s,background .15s}
+  .pin-card .map-btns a:hover,.pin-card .map-btns button:hover{background:rgba(255,255,255,.32)}
+  .pin-card .map-btns .mb-nav{background:#fff;color:#23303a}
+  .pin-card .map-btns .mb-nav:hover{filter:brightness(.94);background:#fff}
   .pin-card .card-cam-link{position:relative;display:block;margin-top:4px;border-radius:8px;overflow:hidden;text-decoration:none}
   .pin-card .cam-ph{width:100%;aspect-ratio:16/9;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;
     background:linear-gradient(135deg,#264a73,#0e1c2b);color:#fff}
@@ -269,7 +271,7 @@
       <div class="lgrp" data-layer="traffic">
         <div class="lgrp-head">
           <button class="lgrp-exp" type="button" aria-label="rozbalit">▸</button>
-          <label class="row lgrp-row" style="--cat-col:#c43838"><span class="row-lbl">🚧&nbsp;Doprava</span><input type="checkbox" class="layerck" data-layer="traffic" checked><span class="ios"></span></label>
+          <label class="row lgrp-row" style="--cat-col:#c43838"><span class="row-lbl">🚧&nbsp;Doprava</span><input type="checkbox" class="layerck" data-layer="traffic"><span class="ios"></span></label>
         </div>
         <div class="lgrp-subs">
           <label class="row sub" style="--cat-col:#c43838"><span class="row-lbl">uzavírky</span><input type="checkbox" class="subck" data-layer="traffic" data-sub="uzavirky" checked><span class="ios"></span></label>
@@ -277,8 +279,8 @@
           <label class="row sub" style="--cat-col:#3a7bd5"><span class="row-lbl">parkování</span><input type="checkbox" class="subck" data-layer="traffic" data-sub="parkovani" checked><span class="ios"></span></label>
         </div>
       </div>
-      <label class="row" style="--cat-col:#7a3290"><span class="row-lbl">🎉&nbsp;Eventy</span><input type="checkbox" class="layerck" data-layer="event" checked><span class="ios"></span></label>
-      <label class="row" style="--cat-col:#2f6fc7"><span class="row-lbl">📹&nbsp;Kamery</span><input type="checkbox" class="layerck" data-layer="camera" checked><span class="ios"></span></label>
+      <label class="row" style="--cat-col:#7a3290"><span class="row-lbl">🎉&nbsp;Eventy</span><input type="checkbox" class="layerck" data-layer="event"><span class="ios"></span></label>
+      <label class="row" style="--cat-col:#2f6fc7"><span class="row-lbl">📹&nbsp;Kamery</span><input type="checkbox" class="layerck" data-layer="camera"><span class="ios"></span></label>
     </div></div>
   </div>
 
@@ -552,27 +554,23 @@ function placeCard(card, screenX, screenY){
 }
 // --- POI karta (Fáze 1): kontakt z OSM + deep-linky na Mapy.cz / Google / navigaci ---
 function escHtml(x){ return String(x).replace(/[<>&"]/g, c=>({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c])); }
-function mapLinks(s){
-  const coord = (s.lat!=null && s.lon!=null) ? `${s.lat},${s.lon}` : null;
-  const q = encodeURIComponent(((s.name||s.label)+' '+CITY_NAME).trim());
-  return {
-    google: `https://www.google.com/maps/search/?api=1&query=${q}`,                       // landing na podnik (recenze/fotky)
-    mapy:   coord ? `https://mapy.cz/zakladni?source=coor&id=${s.lon}%2C${s.lat}&x=${s.lon}&y=${s.lat}&z=18` : `https://mapy.cz/zakladni?q=${q}`,
-    nav:    `https://www.google.com/maps/dir/?api=1&destination=${coord||q}`               // navigace k cíli
-  };
-}
 function poiDetail(services){
   const multi = services.length>1, primary = services[0];
   const blocks = services.map(s=>{
-    const L = mapLinks(s);
-    let rows = '';
-    if(s.phone) rows += `<div class="dtl-row"><span>Telefon</span><a href="tel:${escHtml(s.phone)}">${escHtml(s.phone)}</a></div>`;
-    if(s.web)   rows += `<div class="dtl-row"><span>Web</span><a href="${escHtml(s.web)}" target="_blank" rel="noopener">otevřít →</a></div>`;
+    const q = encodeURIComponent(((s.name||s.label)+' '+CITY_NAME).trim());
+    const reviews = `https://www.google.com/maps/search/?api=1&query=${q}`;     // Google = nás zajímají jen recenze
+    let rows = '';   // nejdůležitější nahoře: otevírací doba, telefon, adresa
     if(s.hours) rows += `<div class="dtl-row"><span>Otevřeno</span><span>${escHtml(s.hours)}</span></div>`;
+    if(s.phone) rows += `<div class="dtl-row"><span>Telefon</span><a href="tel:${escHtml(s.phone)}">${escHtml(s.phone)}</a></div>`;
     if(s.addr)  rows += `<div class="dtl-row"><span>Adresa</span><span>${escHtml(s.addr)}</span></div>`;
     const head = multi ? `<div class="poi-name">${s.icon} ${escHtml(s.name||s.label)}</div>` : '';
+    // Navigovat = NAŠE trasa (z kašny) · Recenze = Google · Web = stránky podniku (když je)
     return `<div class="poi-item">${head}${rows}
-      <div class="map-btns"><a href="${L.mapy}" target="_blank" rel="noopener">📍 Mapy.cz</a><a href="${L.google}" target="_blank" rel="noopener">🗺 Google</a><a href="${L.nav}" target="_blank" rel="noopener">🧭 Navigovat</a></div></div>`;
+      <div class="map-btns">
+        <button class="mb-nav" onclick="__mapNav(${s.lat},${s.lon})">🧭 Navigovat</button>
+        <a class="mb-rev" href="${reviews}" target="_blank" rel="noopener">★ Recenze</a>
+        ${s.web?`<a class="mb-web" href="${escHtml(s.web)}" target="_blank" rel="noopener">🌐 Web</a>`:''}
+      </div></div>`;
   }).join('');
   return {
     title: multi ? 'Služby na tomto místě' : (primary.name||primary.label),
@@ -1522,8 +1520,10 @@ async function main(){
     if(!m) return;
     destHLmesh=m; destHLbase=m.material;
     m.material=new THREE.MeshStandardMaterial({color:COL.hl, roughness:0.5, emissive:0x3a0f00, emissiveIntensity:0.35, side:THREE.DoubleSide});
+    let label=target.name||target.label;                       // když přišlo jen {lat,lon}, dohledej název z budovy
+    if(!label){ const s=(m.userData.services||[]).find(ss=>ss.lat===target.lat&&ss.lon===target.lon); if(s) label=s.name||s.label; }
     const el=document.createElement('div'); el.className='pin hl dest-pin';
-    el.innerHTML=`🔍 ${escHtml(target.name||target.label||'Cíl')}<small>sem jdete</small>`;
+    el.innerHTML=`🔍 ${escHtml(label||'Cíl')}<small>sem jdete</small>`;
     document.body.appendChild(el);
     destPin={ x:m.userData.cx, z:m.userData.cz, y:(m.userData.topY||10)+6, el, visible:true, cls:'hl' };
     PINS.push(destPin);
@@ -1581,7 +1581,9 @@ async function main(){
     clearRoute(){ clearRouteMap(); },
     reset(){ if(typeof animateCamera==='function') animateCamera(CAM0.pos.clone(), CAM0.target.clone(), 700); clearRouteMap(); }
   };
-  updateOriginMarker(NAMESTI.x, NAMESTI.z);   // default origin = náměstí (kiosk)
+  updateOriginMarker(NAMESTI.x, NAMESTI.z);   // default origin = náměstí (kašna)
+  // „Navigovat" z POI karty → naše trasa (ne Google)
+  window.__mapNav = (lat,lon)=>{ if(window.MapAPI) MapAPI.routeTo({lat,lon}); hideDetail(); };
 
   // === VYHLEDÁVÁNÍ + TRASA (UI nad MapAPI) — vpravo dole ===
   (function initSearch(){
