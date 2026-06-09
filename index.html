@@ -1325,6 +1325,7 @@ async function main(){
       linkText:'Otevřít živý přenos'
     }
   });
+  applyLayers();   // FIX: piny/overlaye se vytvářejí ZDE (po init applyLayers na ř.924) → znovu aplikovat stav vrstev (default OFF)
 
   // === ŽIVÁ MAPA: den/noc + počasí (auto default přes Open-Meteo) ============================
   const HB_GEO={lat:49.6058, lon:15.5797};
