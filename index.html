@@ -206,6 +206,11 @@
     #eventsPanel{top:auto;left:0;right:0;bottom:0;width:auto;max-height:72vh;border-radius:16px 16px 0 0}
   }
   /* vyhledávání + trasa (vpravo dole) */
+  #cancelNav{position:fixed;left:50%;bottom:16px;transform:translateX(-50%);z-index:9;display:none;border:0;cursor:pointer;
+    background:#e23b3b;color:#fff;font-size:13px;font-weight:600;padding:10px 18px;border-radius:22px;box-shadow:0 4px 16px rgba(0,0,0,.22)}
+  #cancelNav.show{display:block}
+  #cancelNav:hover{filter:brightness(1.07)}
+  @media (max-width:768px){ #cancelNav{bottom:78px} }
   #searchBox{position:fixed;right:14px;bottom:14px;width:262px;z-index:8;display:flex;flex-direction:column;gap:6px}
   .sb-row{display:flex;gap:6px;align-items:center;background:rgba(255,255,255,.92);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
     border-radius:12px;padding:5px;box-shadow:0 4px 18px rgba(0,0,0,.14)}
@@ -298,6 +303,7 @@
 </div>
 <button id="gear" title="Nastavení" aria-label="Nastavení">⚙️</button>
 <div id="eventsPanel"></div>
+<button id="cancelNav">✕&nbsp;Ukončit navigaci</button>
 <div id="searchBox">
   <div id="searchResults"></div>
   <div class="sb-row">
@@ -1498,8 +1504,8 @@ async function main(){
   function makeChevTex(){
     const cv=document.createElement('canvas'); cv.width=64; cv.height=64; const c=cv.getContext('2d');
     c.clearRect(0,0,64,64);
-    c.strokeStyle='rgba(255,255,255,0.9)'; c.lineWidth=6; c.lineCap='round'; c.lineJoin='round';
-    c.beginPath(); c.moveTo(27,20); c.lineTo(40,32); c.lineTo(27,44); c.stroke();   // menší, tenčí, otevřenější ">" k cíli
+    c.strokeStyle='rgba(255,255,255,0.92)'; c.lineWidth=5; c.lineCap='round'; c.lineJoin='round';
+    c.beginPath(); c.moveTo(29,23); c.lineTo(38,32); c.lineTo(29,41); c.stroke();   // malá, tenká, otevřená ">" k cíli
     const t=new THREE.CanvasTexture(cv); t.wrapS=THREE.RepeatWrapping; t.wrapT=THREE.ClampToEdgeWrapping; return t;
   }
   // geometrie trasy s UV: u = vzdálenost/TILE (opakování šipek), v napříč pruhem
@@ -1507,7 +1513,7 @@ async function main(){
     const ctrl=pts.map(p=>new THREE.Vector3(p.x,0,p.z)); if(ctrl.length<2) return new THREE.BufferGeometry();
     const curve=new THREE.CatmullRomCurve3(ctrl,false,'centripetal');
     const n=Math.max(2,Math.ceil(curve.getLength()/2)); const C=curve.getPoints(n);
-    const hw=width/2, TILE=11, yy=(x,z)=>elevAt(x,z)+off;   // větší rozteč šipek (méně husté)
+    const hw=width/2, TILE=15, yy=(x,z)=>elevAt(x,z)+off;   // větší rozteč šipek (méně husté)
     const L=[0]; for(let i=1;i<C.length;i++) L[i]=L[i-1]+Math.hypot(C[i].x-C[i-1].x, C[i].z-C[i-1].z);
     const left=[],right=[];
     for(let i=0;i<C.length;i++){ const a=C[Math.max(0,i-1)],b=C[Math.min(C.length-1,i+1)];
@@ -1523,7 +1529,8 @@ async function main(){
     const g=new THREE.BufferGeometry(); g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));
     g.setAttribute('uv',new THREE.Float32BufferAttribute(uv,2)); g.computeVertexNormals(); return g;
   }
-  function clearRouteMap(){ if(routeMesh){ scene.remove(routeMesh); routeMesh.geometry.dispose(); routeMesh=null; } if(routeArrows){ scene.remove(routeArrows); routeArrows.geometry.dispose(); routeArrows=null; } if(routeMarker){ scene.remove(routeMarker); routeMarker=null; } clearDest(); }
+  function clearRouteMap(){ if(routeMesh){ scene.remove(routeMesh); routeMesh.geometry.dispose(); routeMesh=null; } if(routeArrows){ scene.remove(routeArrows); routeArrows.geometry.dispose(); routeArrows=null; } if(routeMarker){ scene.remove(routeMarker); routeMarker=null; } clearDest();
+    const cn=document.getElementById('cancelNav'); if(cn) cn.classList.remove('show'); }
   // zvýraznění CÍLE: budova oranžově (jako „Volný byt") + poskakující pin s názvem
   let destHLmesh=null, destHLbase=null, destPin=null;
   function clearDest(){
@@ -1563,6 +1570,7 @@ async function main(){
     const end=pts[pts.length-1];
     routeMarker=new THREE.Mesh(new THREE.SphereGeometry(1.5,14,12), new THREE.MeshBasicMaterial({color:0xe23b3b, depthTest:false}));
     routeMarker.renderOrder = 7; routeMarker.position.set(end.x, elevAt(end.x,end.z)+2.5, end.z); scene.add(routeMarker);
+    const cn=document.getElementById('cancelNav'); if(cn) cn.classList.add('show');   // ukázat „Ukončit navigaci"
   }
   updaters.push(dt=>{ if(routeTex && routeArrows) routeTex.offset.x -= dt*0.22; });   // pomalu plynoucí šipky k cíli
   const poiToXZ = p => ({x:projX(p.lon), z:projZ(p.lat)});
@@ -1610,6 +1618,7 @@ async function main(){
   updateOriginMarker(NAMESTI.x, NAMESTI.z);   // default origin = náměstí (kašna)
   // „Navigovat" z POI karty → naše trasa (ne Google)
   window.__mapNav = (lat,lon)=>{ if(window.MapAPI) MapAPI.routeTo({lat,lon}); hideDetail(); };
+  { const cn=document.getElementById('cancelNav'); if(cn) cn.onclick=()=>MapAPI.reset(); }   // zruší trasu + cíl + zpět na výchozí pohled
 
   // === VYHLEDÁVÁNÍ + TRASA (UI nad MapAPI) — vpravo dole ===
   (function initSearch(){
