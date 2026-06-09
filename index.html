@@ -281,6 +281,7 @@
       </div>
       <label class="row" style="--cat-col:#7a3290"><span class="row-lbl">🎉&nbsp;Eventy</span><input type="checkbox" class="layerck" data-layer="event"><span class="ios"></span></label>
       <label class="row" style="--cat-col:#2f6fc7"><span class="row-lbl">📹&nbsp;Kamery</span><input type="checkbox" class="layerck" data-layer="camera"><span class="ios"></span></label>
+      <label class="row" style="--cat-col:#e8552d"><span class="row-lbl">🏠&nbsp;Reality</span><input type="checkbox" class="layerck" data-layer="reality"><span class="ios"></span></label>
     </div></div>
   </div>
 
@@ -519,6 +520,8 @@ function layerItemOn(layer, sub){
 function applyLayers(){
   for(const p of PINS){ const v=layerItemOn(p.layer,p.sub); p.visible=v; if(!v && openCard && openCard.pinObj===p) hideDetail(); }
   for(const o of OVERLAYS){ o.mesh.visible=layerItemOn(o.layer,o.sub); }
+  // realitka: obarvit „volnou jednotku" jen když je vrstva 'reality' zapnutá (jinak normální budova)
+  if(hlMeshRef && hlOrangeMat){ const on=layerItemOn('reality'); hlMeshRef.material = on?hlOrangeMat:hlOrigMat; hlMeshRef.userData.base = hlMeshRef.material; }
 }
 let openCard=null;   // aktuálně otevřená inline karta {card,pinObj}
 let flyToCamera=null;   // hook do animateCamera (nastaví se v main())
@@ -647,6 +650,7 @@ function hideDetail(){
 }
 addEventListener('keydown', e => { if(e.key==='Escape') hideDetail(); });
 let buildingMeshes=[], hlMeshRef=null, serviceMeshes=[];               // interaktivita + POI služby
+let hlOrangeMat=null, hlOrigMat=null;                                  // realitka highlight (toggle 'reality')
 const bellTowerMeshes=[];                                              // klikatelná věž kostela Nanebevzetí (zvon)
 const occluders=[];                                                    // co může pin „skrýt" (terén, budovy) — pro occlusion test
 // Web Audio API — syntheticky generovaný kostelní zvon (žádný external file → handout drží <1.2 MB)
@@ -860,13 +864,14 @@ async function main(){
     const eGeo=new THREE.BufferGeometry(); eGeo.setAttribute('position',new THREE.Float32BufferAttribute(edgePos,3));
     edgesMesh=new THREE.LineSegments(eGeo,new THREE.LineBasicMaterial({color:COL.edge,transparent:true,opacity:0.5,depthWrite:false})); scene.add(edgesMesh);
   }
-  if(hlMesh){                                       // zvýrazněná „volná jednotka" + klikatelný pin nad ní
-    hlMesh.material=new THREE.MeshStandardMaterial({color:COL.hl,roughness:0.5,emissive:0x3a0f00,emissiveIntensity:0.35,side:THREE.DoubleSide});
-    hlMesh.userData.base=hlMesh.material; hlMeshRef=hlMesh;
+  if(hlMesh){                                       // „volná jednotka" (realitka) — vrstva 'reality', default OFF
+    hlOrigMat = hlMesh.material;                     // původní materiál budovy
+    hlOrangeMat = new THREE.MeshStandardMaterial({color:COL.hl,roughness:0.5,emissive:0x3a0f00,emissiveIntensity:0.35,side:THREE.DoubleSide});
+    hlMeshRef=hlMesh;                                // obarvení řeší applyLayers podle stavu vrstvy 'reality'
     const distToNamesti = Math.round(Math.hypot(hlInfo.x-NAMESTI.x,hlInfo.z-NAMESTI.z));
     addPin(hlInfo.x, hlInfo.z, hlInfo.topY+5,
       `Volný byt 2+kk · 65 m²<small>≈ ${distToNamesti} m k náměstí</small>`,
-      { cls:'hl', detail:{
+      { cls:'hl', layer:'reality', detail:{
         title:'Volný byt 2+kk · 65 m²',
         subtitle:`Dolní ulice u řeky · ${distToNamesti} m k náměstí`,
         body:`
