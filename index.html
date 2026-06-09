@@ -167,6 +167,9 @@
   /* shlukový badge na pinu (počet akcí) */
   .pin .pin-badge{display:inline-flex;align-items:center;justify-content:center;min-width:16px;height:16px;margin-left:5px;
     padding:0 4px;border-radius:9px;background:#fff;color:#7a3290;font-size:11px;font-weight:700;vertical-align:middle}
+  /* cílový pin trasy — jemně poskakuje (upozornění „sem jdete") */
+  .pin.dest-pin{animation:destBob 1.05s ease-in-out infinite}
+  @keyframes destBob{0%,100%{transform:translate(-50%,-110%)}50%{transform:translate(-50%,-128%)}}
   /* panel kulturních akcí (vpravo / na mobilu spodní sheet) */
   #eventsPanel{position:fixed;top:14px;right:14px;width:300px;max-height:calc(100vh - 28px);display:none;flex-direction:column;
     background:rgba(255,255,255,.92);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-radius:16px;
@@ -1504,7 +1507,28 @@ async function main(){
     const g=new THREE.BufferGeometry(); g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));
     g.setAttribute('uv',new THREE.Float32BufferAttribute(uv,2)); g.computeVertexNormals(); return g;
   }
-  function clearRouteMap(){ if(routeMesh){ scene.remove(routeMesh); routeMesh.geometry.dispose(); routeMesh=null; } if(routeMarker){ scene.remove(routeMarker); routeMarker=null; } }
+  function clearRouteMap(){ if(routeMesh){ scene.remove(routeMesh); routeMesh.geometry.dispose(); routeMesh=null; } if(routeMarker){ scene.remove(routeMarker); routeMarker=null; } clearDest(); }
+  // zvýraznění CÍLE: budova oranžově (jako „Volný byt") + poskakující pin s názvem
+  let destHLmesh=null, destHLbase=null, destPin=null;
+  function clearDest(){
+    if(destHLmesh){ destHLmesh.material=destHLbase; destHLmesh=null; destHLbase=null; }
+    if(destPin){ const i=PINS.indexOf(destPin); if(i>=0) PINS.splice(i,1); if(destPin.el) destPin.el.remove(); destPin=null; }
+  }
+  function highlightDest(target){
+    clearDest();
+    if(target==null || target.lat==null) return;            // jen pro POI (má lat/lon)
+    let m = serviceMeshes.find(mm => (mm.userData.services||[]).some(s => s.lat===target.lat && s.lon===target.lon));
+    if(!m){ const tx=projX(target.lon), tz=projZ(target.lat); let bd=1e9;   // fallback: nejbližší budova
+      for(const mm of buildingMeshes){ const d=(mm.userData.cx-tx)**2+(mm.userData.cz-tz)**2; if(d<bd){bd=d;m=mm;} } }
+    if(!m) return;
+    destHLmesh=m; destHLbase=m.material;
+    m.material=new THREE.MeshStandardMaterial({color:COL.hl, roughness:0.5, emissive:0x3a0f00, emissiveIntensity:0.35, side:THREE.DoubleSide});
+    const el=document.createElement('div'); el.className='pin hl dest-pin';
+    el.innerHTML=`🔍 ${escHtml(target.name||target.label||'Cíl')}<small>sem jdete</small>`;
+    document.body.appendChild(el);
+    destPin={ x:m.userData.cx, z:m.userData.cz, y:(m.userData.topY||10)+6, el, visible:true, cls:'hl' };
+    PINS.push(destPin);
+  }
   function drawRoutePath(pts){
     clearRouteMap();
     routeTex = routeTex || makeChevTex();
@@ -1546,6 +1570,7 @@ async function main(){
       const from = fromXZ || this._origin;
       const r = routePath(from, to); if(!r) return null;
       drawRoutePath(r.pts);
+      highlightDest(target);                                  // cíl oranžově + pin nad ním
       // NÁHLED ZE SHORA: zarámovat celou trasu (oba konce), ne zoom na cíl
       let minx=1e9,maxx=-1e9,minz=1e9,maxz=-1e9;
       for(const p of r.pts){ if(p.x<minx)minx=p.x; if(p.x>maxx)maxx=p.x; if(p.z<minz)minz=p.z; if(p.z>maxz)maxz=p.z; }
