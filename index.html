@@ -201,7 +201,8 @@
   #searchBox{position:fixed;right:14px;bottom:14px;width:262px;z-index:8;display:flex;flex-direction:column;gap:6px}
   .sb-row{display:flex;gap:6px;align-items:center;background:rgba(255,255,255,.92);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
     border-radius:12px;padding:5px;box-shadow:0 4px 18px rgba(0,0,0,.14)}
-  #searchInput{flex:1;border:0;background:transparent;font-size:13px;padding:7px 9px;outline:none;color:#23303a}
+  .sb-ico{flex:none;font-size:14px;padding-left:7px;opacity:.65}
+  #searchInput{flex:1;border:0;background:transparent;font-size:13px;padding:7px 6px;outline:none;color:#23303a}
   #originBtn{flex:none;border:0;width:36px;height:36px;border-radius:9px;background:rgba(0,0,0,.06);cursor:pointer;font-size:15px;transition:background .15s}
   #originBtn.arm{background:#46b1a6}
   #searchResults{display:none;flex-direction:column;background:rgba(255,255,255,.95);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
@@ -291,8 +292,9 @@
 <div id="searchBox">
   <div id="searchResults"></div>
   <div class="sb-row">
+    <span class="sb-ico">🔍</span>
     <input id="searchInput" type="text" placeholder="Hledat (lékárna, hospoda…)" autocomplete="off">
-    <button id="originBtn" title="Nastavit moji polohu (odkud)">📍</button>
+    <button id="originBtn" title="Moje poloha (odkud vede trasa)">🧭</button>
   </div>
 </div>
 <div id="err"></div>
@@ -1472,17 +1474,48 @@ async function main(){
     pts.reverse();
     return { pts:[{x:from.x,z:from.z}, ...pts, {x:to.x,z:to.z}], dist:dist.get(t)||0 };
   }
-  let routeMesh=null, routeMarker=null;
+  let routeMesh=null, routeMarker=null, routeTex=null;
+  // šipková textura (jeden „dlaždicový" chevron ">" mířící k cíli, na červeném podkladu)
+  function makeChevTex(){
+    const cv=document.createElement('canvas'); cv.width=64; cv.height=64; const c=cv.getContext('2d');
+    c.fillStyle='#e23b3b'; c.fillRect(0,0,64,64);
+    c.strokeStyle='rgba(255,255,255,0.9)'; c.lineWidth=11; c.lineCap='round'; c.lineJoin='round';
+    c.beginPath(); c.moveTo(19,14); c.lineTo(46,32); c.lineTo(19,50); c.stroke();   // ">" = směr k cíli (+u)
+    const t=new THREE.CanvasTexture(cv); t.wrapS=THREE.RepeatWrapping; t.wrapT=THREE.ClampToEdgeWrapping; return t;
+  }
+  // geometrie trasy s UV: u = vzdálenost/TILE (opakování šipek), v napříč pruhem
+  function routeGeom(pts, width, off){
+    const ctrl=pts.map(p=>new THREE.Vector3(p.x,0,p.z)); if(ctrl.length<2) return new THREE.BufferGeometry();
+    const curve=new THREE.CatmullRomCurve3(ctrl,false,'centripetal');
+    const n=Math.max(2,Math.ceil(curve.getLength()/2)); const C=curve.getPoints(n);
+    const hw=width/2, TILE=7, yy=(x,z)=>elevAt(x,z)+off;
+    const L=[0]; for(let i=1;i<C.length;i++) L[i]=L[i-1]+Math.hypot(C[i].x-C[i-1].x, C[i].z-C[i-1].z);
+    const left=[],right=[];
+    for(let i=0;i<C.length;i++){ const a=C[Math.max(0,i-1)],b=C[Math.min(C.length-1,i+1)];
+      let tx=b.x-a.x,tz=b.z-a.z; const tl=Math.hypot(tx,tz)||1; tx/=tl;tz/=tl; const nx=-tz,nz=tx;
+      left.push([C[i].x+nx*hw,C[i].z+nz*hw]); right.push([C[i].x-nx*hw,C[i].z-nz*hw]); }
+    const pos=[],uv=[];
+    for(let i=0;i<C.length-1;i++){
+      const l0=left[i],l1=left[i+1],r0=right[i],r1=right[i+1], u0=L[i]/TILE,u1=L[i+1]/TILE;
+      const P=p=>pos.push(p[0],yy(p[0],p[1]),p[1]);
+      P(l0);P(l1);P(r0); P(r0);P(l1);P(r1);
+      uv.push(u0,0, u1,0, u0,1,  u0,1, u1,0, u1,1);
+    }
+    const g=new THREE.BufferGeometry(); g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));
+    g.setAttribute('uv',new THREE.Float32BufferAttribute(uv,2)); g.computeVertexNormals(); return g;
+  }
   function clearRouteMap(){ if(routeMesh){ scene.remove(routeMesh); routeMesh.geometry.dispose(); routeMesh=null; } if(routeMarker){ scene.remove(routeMarker); routeMarker=null; } }
   function drawRoutePath(pts){
     clearRouteMap();
-    routeMesh=new THREE.Mesh(ribbonCore(pts.map(p=>new THREE.Vector3(p.x,0,p.z)), 3.2, 0.55),
-      new THREE.MeshBasicMaterial({color:0x2f6fc7, transparent:true, opacity:0.9, depthWrite:false, side:THREE.DoubleSide}));
+    routeTex = routeTex || makeChevTex();
+    routeMesh=new THREE.Mesh(routeGeom(pts, 3.6, 0.55),
+      new THREE.MeshBasicMaterial({map:routeTex, transparent:true, opacity:0.96, depthWrite:false, side:THREE.DoubleSide}));
     scene.add(routeMesh);
     const end=pts[pts.length-1];
-    routeMarker=new THREE.Mesh(new THREE.SphereGeometry(1.6,12,10), new THREE.MeshBasicMaterial({color:0x2f6fc7}));
+    routeMarker=new THREE.Mesh(new THREE.SphereGeometry(1.7,14,12), new THREE.MeshBasicMaterial({color:0xe23b3b}));
     routeMarker.position.set(end.x, elevAt(end.x,end.z)+3, end.z); scene.add(routeMarker);
   }
+  updaters.push(dt=>{ if(routeTex && routeMesh) routeTex.offset.x -= dt*0.22; });   // pomalu plynoucí šipky k cíli
   const poiToXZ = p => ({x:projX(p.lon), z:projZ(p.lat)});
   // marker „vy jste tady" (origin trasy)
   let originMarker=null;
@@ -1513,8 +1546,12 @@ async function main(){
       const from = fromXZ || this._origin;
       const r = routePath(from, to); if(!r) return null;
       drawRoutePath(r.pts);
-      const mx=(from.x+to.x)/2, mz=(from.z+to.z)/2, off=Math.max(45, Math.hypot(to.x-from.x,to.z-from.z)*0.95);
-      if(flyToCamera) flyToCamera(new THREE.Vector3(mx+off*0.6, off, mz+off*0.6), new THREE.Vector3(mx,4,mz), 950);
+      // NÁHLED ZE SHORA: zarámovat celou trasu (oba konce), ne zoom na cíl
+      let minx=1e9,maxx=-1e9,minz=1e9,maxz=-1e9;
+      for(const p of r.pts){ if(p.x<minx)minx=p.x; if(p.x>maxx)maxx=p.x; if(p.z<minz)minz=p.z; if(p.z>maxz)maxz=p.z; }
+      const cx=(minx+maxx)/2, cz=(minz+maxz)/2, span=Math.max(maxx-minx, maxz-minz, 40);
+      const D=span*3.3+70;   // FOV 18° → potřeba ~3,2× span, ať se vejde celá trasa (méně zoomu)
+      if(flyToCamera) flyToCamera(new THREE.Vector3(cx, D*0.9, cz + D*0.34), new THREE.Vector3(cx, 0, cz), 950);
       return { distM: Math.round(r.dist) };
     },
     clearRoute(){ clearRouteMap(); },
