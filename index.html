@@ -107,47 +107,51 @@
     from{transform:translate(-50%,18px) scale(1); opacity:1}
     to{transform:translate(-50%,18px) scale(.4); opacity:0}
   }
-  /* === iOS Settings-style panel (pravý horní roh) =================== */
-  #panel{position:fixed;top:14px;right:14px;width:210px;background:rgba(255,255,255,.80);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border-radius:14px;padding:11px 11px 9px;color:#23303a;font-size:12px;line-height:1.4;box-shadow:0 2px 14px rgba(0,0,0,.10);-webkit-user-select:none;user-select:none;z-index:6;display:none}
-  .panel-title{font-weight:600;color:#1d2530;font-size:13px;padding:0 4px}
-  .panel-sub{font-size:10.5px;opacity:.6;padding:1px 4px 0}
-  /* živý dashboard v hlavičce panelu */
-  .dash{padding:1px 4px 9px;margin-bottom:7px;border-bottom:1px solid rgba(0,0,0,.08)}
-  .dash-title{font-weight:700;color:#1b2430;font-size:14.5px;display:flex;align-items:baseline;gap:6px;line-height:1.15}
-  .dash-tag{font-weight:600;font-size:9px;letter-spacing:.6px;text-transform:uppercase;color:#fff;background:#46b1a6;padding:2px 5px;border-radius:5px}
-  .dash-meta{display:flex;flex-wrap:wrap;align-items:center;gap:3px 9px;font-size:11px;color:#3a4654;margin-top:5px}
-  .dash-meta .dash-nd{opacity:.78}
-  .dash-meta .dash-w{font-weight:600;margin-left:auto}
-  /* collapsible sekce */
-  .sec+.sec{margin-top:5px}
-  .sec-head{display:flex;align-items:center;justify-content:space-between;padding:8px 10px;border-radius:9px;background:rgba(255,255,255,.5);cursor:pointer;transition:background .15s;font-weight:500;font-size:12.5px}
-  .sec-head:hover{background:rgba(255,255,255,.85)}
-  .sec-head .chev{font-size:9px;opacity:.55;transition:transform .22s}
+  /* === iOS-style panel (pravý horní roh) =================== */
+  #panel{position:fixed;top:14px;right:14px;width:242px;background:rgba(250,250,252,.80);
+    backdrop-filter:blur(24px) saturate(180%);-webkit-backdrop-filter:blur(24px) saturate(180%);
+    border:.5px solid rgba(0,0,0,.05);border-radius:20px;padding:13px 13px 11px;color:#1c1c1e;font-size:12px;line-height:1.4;
+    box-shadow:0 12px 36px rgba(0,0,0,.16);-webkit-user-select:none;user-select:none;z-index:6;display:none}
+  .panel-title{font-weight:600;color:#1c1c1e;font-size:13px;padding:0 4px}
+  .panel-sub{font-size:10.5px;color:#8a8a8e;padding:2px 4px 0}
+  /* živý dashboard v hlavičce */
+  .dash{padding:2px 4px 11px;margin-bottom:10px;border-bottom:.5px solid rgba(60,60,67,.12)}
+  .dash-title{font-weight:700;color:#1c1c1e;font-size:16px;display:flex;align-items:center;gap:7px;line-height:1.1;letter-spacing:-.01em}
+  .dash-tag{font-weight:700;font-size:8.5px;letter-spacing:.7px;text-transform:uppercase;color:#fff;background:#2aa198;padding:3px 6px;border-radius:6px}
+  .dash-meta{display:flex;flex-wrap:wrap;align-items:center;gap:3px 10px;font-size:11.5px;color:#48484a;margin-top:6px}
+  .dash-meta .dash-nd{color:#8a8a8e}
+  .dash-meta .dash-w{font-weight:600;margin-left:auto;color:#1c1c1e}
+  /* sekce (accordion) — iOS grouped feel */
+  .sec+.sec{margin-top:7px}
+  .sec-head{display:flex;align-items:center;justify-content:space-between;padding:9px 11px;border-radius:12px;background:rgba(120,120,128,.10);cursor:pointer;transition:background .15s;font-weight:600;font-size:13px;color:#1c1c1e}
+  .sec-head:hover{background:rgba(120,120,128,.17)}
+  .sec-head .chev{font-size:10px;color:#aeaeb2;transition:transform .22s}
   .sec.open .sec-head .chev{transform:rotate(180deg)}
   .sec-body{max-height:0;overflow:hidden;transition:max-height .26s ease}
-  .sec.open .sec-body{max-height:420px}
-  .sec-body-inner{padding:5px 6px 2px}
-  /* řádek (label + toggle / segmented) */
-  .row{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:5px 4px;font-size:12px;cursor:pointer}
-  .row.muted{opacity:.45;cursor:default}
+  .sec.open .sec-body{max-height:480px}
+  .sec-body-inner{padding:3px 9px 2px}
+  /* řádek — hairline oddělovače jako iOS Settings */
+  .row{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 2px;font-size:13px;cursor:pointer;color:#1c1c1e}
+  .sec-body-inner .row+.row,.sec-body-inner .lgrp+.row,.sec-body-inner .row+.lgrp{border-top:.5px solid rgba(60,60,67,.10)}
+  .row.muted{opacity:.4;cursor:default}
   .row > .row-lbl{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .row input{position:absolute;opacity:0;pointer-events:none;width:0;height:0}
-  .row .badge{font-size:9.5px;background:rgba(0,0,0,.08);padding:1px 6px;border-radius:8px;font-weight:500;letter-spacing:.02em}
-  /* iOS toggle pill (sdílený) */
-  .ios{width:30px;height:18px;border-radius:9px;background:#c9c4b8;position:relative;display:inline-block;transition:background .18s ease;flex-shrink:0;box-shadow:0 0 0 1px rgba(0,0,0,.06) inset}
-  .ios::after{content:"";position:absolute;top:1.5px;left:1.5px;width:15px;height:15px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.28);transition:left .18s ease}
-  .row input:checked ~ .ios{background:var(--cat-col,#6e6e72)}
-  .row input:checked ~ .ios::after{left:13.5px}
-  /* segmented control (Roční období / Den-noc) */
-  .seg{display:flex;background:rgba(0,0,0,.06);padding:2px;border-radius:9px;margin:4px 4px 6px}
-  .seg button{border:0;background:transparent;height:24px;flex:1;min-width:0;border-radius:7px;cursor:pointer;font-size:12px;line-height:1;padding:0;transition:background .15s,box-shadow .15s}
-  .seg button.on{background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.10)}
-  .seg button:hover:not(.on){background:rgba(255,255,255,.5)}
+  .row .badge{font-size:9.5px;background:rgba(120,120,128,.16);padding:1px 6px;border-radius:8px;font-weight:500}
+  /* iOS switch */
+  .ios{width:38px;height:23px;border-radius:23px;background:rgba(120,120,128,.32);position:relative;display:inline-block;transition:background .2s ease;flex-shrink:0}
+  .ios::after{content:"";position:absolute;top:2px;left:2px;width:19px;height:19px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.3),0 1px 1px rgba(0,0,0,.16);transition:left .2s cubic-bezier(.3,1.3,.5,1)}
+  .row input:checked ~ .ios{background:var(--cat-col,#34c759)}
+  .row input:checked ~ .ios::after{left:17px}
+  /* segmented control */
+  .seg{display:flex;background:rgba(120,120,128,.12);padding:2px;border-radius:9px;margin:6px 2px 4px;gap:2px}
+  .seg button{border:0;background:transparent;height:26px;flex:1;min-width:0;border-radius:7px;cursor:pointer;font-size:13px;line-height:1;padding:0;transition:background .15s,box-shadow .15s}
+  .seg button.on{background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.12)}
+  .seg button:hover:not(.on){background:rgba(255,255,255,.55)}
   /* navigace */
-  .nav{display:flex;gap:5px;margin-top:9px;padding-top:9px;border-top:1px solid rgba(0,0,0,.07);justify-content:center}
-  .nav button{width:34px;height:30px;border:0;border-radius:9px;background:rgba(255,255,255,.6);cursor:pointer;font-size:14px;line-height:1;transition:background .15s,transform .1s;padding:0}
-  .nav button:hover{background:rgba(255,255,255,.95)}
-  .nav button:active{transform:scale(.95)}
+  .nav{display:flex;gap:6px;margin-top:11px;padding-top:11px;border-top:.5px solid rgba(60,60,67,.10);justify-content:center}
+  .nav button{width:36px;height:32px;border:0;border-radius:10px;background:rgba(120,120,128,.14);cursor:pointer;font-size:15px;line-height:1;color:#1c1c1e;transition:background .15s,transform .1s;padding:0}
+  .nav button:hover{background:rgba(120,120,128,.24)}
+  .nav button:active{transform:scale(.94)}
   /* ozubené kolečko (FAB) — jen na mobilu, otevírá/zavírá panel */
   #gear{position:fixed;top:14px;right:14px;width:44px;height:44px;border:0;border-radius:50%;
     background:rgba(255,255,255,.85);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
@@ -268,6 +272,7 @@
         <button data-s="autumn" title="podzim">🍂</button>
         <button data-s="winter" title="zima">❄️</button>
       </div>
+      <label class="row" style="--cat-col:#e23b3b"><span class="row-lbl">Trasa za budovami</span><input type="checkbox" id="routeOccCk" checked><span class="ios"></span></label>
       <!-- Den/noc, Počasí, mraky — skryto pro pozdější doladění. Kód v JS zachován pro budoucnost. -->
     </div></div>
   </div>
@@ -485,12 +490,14 @@ function ribbon(geom,width,off,step=2){
   return ribbonCore(geom.map(p=>new THREE.Vector3(projX(p.lon),0,projZ(p.lat))), width, off, step);
 }
 // jádro: hladký pruh z ctrl bodů (Vector3 v lokálních x/z) — sdílí uzavírky/objížďky i routovací trasa
-function ribbonCore(ctrl,width,off,step=2){
+// jeden zdroj pravdy pro všechny pruhy (uzavírky/objížďky/trasa). uv=true → přidá UV pro šipkovou texturu.
+function ribbonCore(ctrl,width,off,step=2,uv=false,tile=15){
   if(ctrl.length<2) return new THREE.BufferGeometry();
   const curve = new THREE.CatmullRomCurve3(ctrl,false,'centripetal');
   const n = Math.max(2, Math.ceil(curve.getLength()/step));     // hustota ~1 bod / step metrů
   const C = curve.getPoints(n);                                  // hladká osa (n+1 bodů)
-  const hw=width/2, left=[], right=[];
+  const hw=width/2, left=[], right=[], L=[0];
+  for(let i=1;i<C.length;i++) L[i]=L[i-1]+Math.hypot(C[i].x-C[i-1].x, C[i].z-C[i-1].z);   // kumulativní délka (pro UV)
   for(let i=0;i<C.length;i++){
     const a=C[Math.max(0,i-1)], b=C[Math.min(C.length-1,i+1)];   // central-difference tečna
     let tx=b.x-a.x,tz=b.z-a.z; const tl=Math.hypot(tx,tz)||1; tx/=tl; tz/=tl;
@@ -498,13 +505,16 @@ function ribbonCore(ctrl,width,off,step=2){
     left.push([C[i].x+nx*hw, C[i].z+nz*hw]);
     right.push([C[i].x-nx*hw, C[i].z-nz*hw]);
   }
-  const pos=[], yy=(x,z)=>elevAt(x,z)+off;
+  const pos=[], uvs=[], yy=(x,z)=>elevAt(x,z)+off;
   for(let i=0;i<C.length-1;i++){
     const l0=left[i],l1=left[i+1],r0=right[i],r1=right[i+1];
     pos.push(l0[0],yy(l0[0],l0[1]),l0[1], l1[0],yy(l1[0],l1[1]),l1[1], r0[0],yy(r0[0],r0[1]),r0[1],
              r0[0],yy(r0[0],r0[1]),r0[1], l1[0],yy(l1[0],l1[1]),l1[1], r1[0],yy(r1[0],r1[1]),r1[1]);
+    if(uv){ const u0=L[i]/tile,u1=L[i+1]/tile; uvs.push(u0,0, u1,0, u0,1,  u0,1, u1,0, u1,1); }
   }
-  const g=new THREE.BufferGeometry(); g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3)); g.computeVertexNormals(); return g;
+  const g=new THREE.BufferGeometry(); g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));
+  if(uv) g.setAttribute('uv',new THREE.Float32BufferAttribute(uvs,2));
+  g.computeVertexNormals(); return g;
 }
 function drape(geo,off){ const pos=geo.attributes.position; for(let i=0;i<pos.count;i++){const x=pos.getX(i),z=pos.getZ(i);pos.setY(i,elevAt(x,z)+off);} pos.needsUpdate=true; geo.computeVertexNormals(); }
 
@@ -1157,63 +1167,6 @@ async function main(){
     updaters.push(dt=>{ if(!leafFallGroup.visible) return; const {m,pts,d}=leafFallGroup.userData, t=clock.elapsedTime; for(let i=0;i<pts.length;i++){const p=pts[i]; p.y-=p.sp*dt; if(p.y<-3) p.y=80; d.position.set(p.x+Math.sin(t*0.6+p.sw)*0.9, p.y, p.z+Math.cos(t*0.5+p.sw)*0.7); d.rotation.set(p.rot+t*0.5, p.rot*0.5+t*0.4, 0); d.updateMatrix(); m.setMatrixAt(i,d.matrix);} m.instanceMatrix.needsUpdate=true; });
   }
 
-  /* === EASTER EGG: brodský horník — vypnuto (esteticky neusedalo do terénu). Kód zachován pro future. ===
-  {
-    const cave = new THREE.Group();
-    cave.position.set(285, -22, 0);
-    cave.rotation.y = -Math.PI/2;
-    scene.add(cave);
-
-    const tunMat=new THREE.MeshStandardMaterial({color:0x2a221c,roughness:1,flatShading:true});
-    // Stěny + strop + podlaha tunelu (otvor v +Z lokálně, hloubka 6m do -Z)
-    const tL=new THREE.Mesh(new THREE.BoxGeometry(0.3,4.5,6),tunMat); tL.position.set(-2.0,0,-3); cave.add(tL);
-    const tR=new THREE.Mesh(new THREE.BoxGeometry(0.3,4.5,6),tunMat); tR.position.set(2.0,0,-3); cave.add(tR);
-    const tT=new THREE.Mesh(new THREE.BoxGeometry(4.3,0.3,6),tunMat); tT.position.set(0,2.1,-3); cave.add(tT);
-    const tB=new THREE.Mesh(new THREE.BoxGeometry(4.3,0.3,6),tunMat); tB.position.set(0,-2.1,-3); cave.add(tB);
-    const tBack=new THREE.Mesh(new THREE.PlaneGeometry(4,4.5),tunMat); tBack.position.set(0,0,-6); cave.add(tBack);
-    // Tmavý "stín" portalu (přidá hloubku otvoru)
-    const portal=new THREE.Mesh(new THREE.PlaneGeometry(4.2,4.7),new THREE.MeshBasicMaterial({color:0x000000,transparent:true,opacity:0.85}));
-    portal.position.set(0,0,0.05); cave.add(portal);
-
-    // Horník: tělo + hlava + helma + krumpáč
-    const minerY=-1.4;
-    const body=new THREE.Mesh(new THREE.CapsuleGeometry(0.4,0.9,4,6),new THREE.MeshStandardMaterial({color:0x4a3826,roughness:0.85}));
-    body.position.set(-0.4,minerY+0.6,-3.5); cave.add(body);
-    const head=new THREE.Mesh(new THREE.SphereGeometry(0.30,8,6),new THREE.MeshStandardMaterial({color:0xd6a684,roughness:0.7}));
-    head.position.set(-0.4,minerY+1.55,-3.5); cave.add(head);
-    const helmet=new THREE.Mesh(new THREE.ConeGeometry(0.40,0.36,8),new THREE.MeshStandardMaterial({color:0xc8341f,roughness:0.5,emissive:0x4a1408,emissiveIntensity:0.5}));
-    helmet.position.set(-0.4,minerY+1.95,-3.5); cave.add(helmet);
-    // Krumpáč (rukojeť + krátká hlavice) — bude se kývat
-    const pickHandle=new THREE.Mesh(new THREE.CylinderGeometry(0.05,0.05,1.0,6),new THREE.MeshStandardMaterial({color:0x6e4a2d,roughness:0.85}));
-    pickHandle.position.set(0.15,minerY+1,-3.5); cave.add(pickHandle);
-    const pickHead=new THREE.Mesh(new THREE.BoxGeometry(0.55,0.09,0.09),new THREE.MeshStandardMaterial({color:0x6a6a6a,roughness:0.4,metalness:0.5}));
-    pickHead.position.set(0.55,minerY+1.45,-3.5); cave.add(pickHead);
-    // Pivot pro krumpáč (kývání)
-    const pickPivot=new THREE.Group(); pickPivot.position.set(0.15,minerY+1.4,-3.5);
-    pickHandle.position.sub(pickPivot.position); pickHead.position.sub(pickPivot.position);
-    pickPivot.add(pickHandle); pickPivot.add(pickHead); cave.add(pickPivot);
-    pickPivot.rotation.z = -Math.PI/5;
-
-    // Lucerna — žlutá svítící koule + bodové světlo (mírně bliká, jako reálný plamen)
-    const lantern=new THREE.Mesh(new THREE.SphereGeometry(0.18,8,6),new THREE.MeshBasicMaterial({color:0xffd47a}));
-    lantern.position.set(0.4,minerY+0.7,-2.7); cave.add(lantern);
-    const lampL=new THREE.PointLight(0xffd47a,1.5,14,1.5); lampL.position.copy(lantern.position); cave.add(lampL);
-
-    // Kameny u vchodu
-    for(let i=0;i<6;i++){
-      const stone=new THREE.Mesh(new THREE.IcosahedronGeometry(0.18+rand()*0.25,0),new THREE.MeshStandardMaterial({color:0x7a6e5a,roughness:0.95,flatShading:true}));
-      stone.position.set((rand()*2-1)*1.6, -2.0, -(rand()*4)-0.5);
-      stone.rotation.set(rand()*6,rand()*6,rand()*6);
-      cave.add(stone);
-    }
-    // Animace: krumpáč kýve, lucerna mírně bliká
-    updaters.push(dt => {
-      pickPivot.rotation.z = -Math.PI/5 + Math.sin(clock.elapsedTime*3.5)*0.45;
-      lampL.intensity = 1.5 + Math.sin(clock.elapsedTime*7.3)*0.18 + Math.sin(clock.elapsedTime*13.1)*0.08;
-    });
-
-  }
-  === konec disabled easter egg === */
 
   // === DEMO OVERLAYS: kulturní akce + doprava ==========================================
   // 1) KULTURNÍ AKCE (vrstva 'event') — shlukování blízkých akcí do 1 pinu s počtem; klik → boční panel
@@ -1500,7 +1453,8 @@ async function main(){
       if(md>sq && idx>0){ keep[idx]=true; st.push([a,idx],[idx,b]); } }
     return p.filter((_,i)=>keep[i]);
   }
-  let routeMesh=null, routeArrows=null, routeMarker=null, routeTex=null;
+  let routeMesh=null, routeArrows=null, routeGhost=null, routeMarker=null, routeTex=null;
+  let routeOcclude=true, lastRouteRaw=null;   // routeOcclude=true → trasu zastíní budovy (+ ghost skrz ně); false → vždy navrch
   // šipková textura — PRŮHLEDNÉ pozadí + bílý chevron ">" k cíli (kreslí se PŘES červenou čáru)
   function makeChevTex(){
     const cv=document.createElement('canvas'); cv.width=64; cv.height=64; const c=cv.getContext('2d');
@@ -1509,28 +1463,10 @@ async function main(){
     c.beginPath(); c.moveTo(29,23); c.lineTo(38,32); c.lineTo(29,41); c.stroke();   // malá, tenká, otevřená ">" k cíli
     const t=new THREE.CanvasTexture(cv); t.wrapS=THREE.RepeatWrapping; t.wrapT=THREE.ClampToEdgeWrapping; return t;
   }
-  // geometrie trasy s UV: u = vzdálenost/TILE (opakování šipek), v napříč pruhem
-  function routeGeom(pts, width, off){
-    const ctrl=pts.map(p=>new THREE.Vector3(p.x,0,p.z)); if(ctrl.length<2) return new THREE.BufferGeometry();
-    const curve=new THREE.CatmullRomCurve3(ctrl,false,'centripetal');
-    const n=Math.max(2,Math.ceil(curve.getLength()/2)); const C=curve.getPoints(n);
-    const hw=width/2, TILE=15, yy=(x,z)=>elevAt(x,z)+off;   // větší rozteč šipek (méně husté)
-    const L=[0]; for(let i=1;i<C.length;i++) L[i]=L[i-1]+Math.hypot(C[i].x-C[i-1].x, C[i].z-C[i-1].z);
-    const left=[],right=[];
-    for(let i=0;i<C.length;i++){ const a=C[Math.max(0,i-1)],b=C[Math.min(C.length-1,i+1)];
-      let tx=b.x-a.x,tz=b.z-a.z; const tl=Math.hypot(tx,tz)||1; tx/=tl;tz/=tl; const nx=-tz,nz=tx;
-      left.push([C[i].x+nx*hw,C[i].z+nz*hw]); right.push([C[i].x-nx*hw,C[i].z-nz*hw]); }
-    const pos=[],uv=[];
-    for(let i=0;i<C.length-1;i++){
-      const l0=left[i],l1=left[i+1],r0=right[i],r1=right[i+1], u0=L[i]/TILE,u1=L[i+1]/TILE;
-      const P=p=>pos.push(p[0],yy(p[0],p[1]),p[1]);
-      P(l0);P(l1);P(r0); P(r0);P(l1);P(r1);
-      uv.push(u0,0, u1,0, u0,1,  u0,1, u1,0, u1,1);
-    }
-    const g=new THREE.BufferGeometry(); g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));
-    g.setAttribute('uv',new THREE.Float32BufferAttribute(uv,2)); g.computeVertexNormals(); return g;
-  }
-  function clearRouteMap(){ if(routeMesh){ scene.remove(routeMesh); routeMesh.geometry.dispose(); routeMesh=null; } if(routeArrows){ scene.remove(routeArrows); routeArrows.geometry.dispose(); routeArrows=null; } if(routeMarker){ scene.remove(routeMarker); routeMarker=null; } clearDest();
+  function clearRouteMap(){
+    for(const m of [routeMesh,routeArrows,routeGhost]){ if(m){ scene.remove(m); m.geometry.dispose(); } }
+    routeMesh=routeArrows=routeGhost=null;
+    if(routeMarker){ scene.remove(routeMarker); routeMarker=null; } clearDest();
     const cn=document.getElementById('cancelNav'); if(cn) cn.classList.remove('show'); }
   // zvýraznění CÍLE: budova oranžově (jako „Volný byt") + poskakující pin s názvem
   let destHLmesh=null, destHLbase=null, destPin=null;
@@ -1546,7 +1482,8 @@ async function main(){
       for(const mm of buildingMeshes){ const d=(mm.userData.cx-tx)**2+(mm.userData.cz-tz)**2; if(d<bd){bd=d;m=mm;} } }
     if(!m) return;
     destHLmesh=m; destHLbase=m.material;
-    m.material=new THREE.MeshStandardMaterial({color:COL.hl, roughness:0.5, emissive:0x3a0f00, emissiveIntensity:0.35, side:THREE.DoubleSide});
+    if(!hlOrangeMat) hlOrangeMat=new THREE.MeshStandardMaterial({color:COL.hl, roughness:0.5, emissive:0x3a0f00, emissiveIntensity:0.35, side:THREE.DoubleSide});
+    m.material=hlOrangeMat;   // sdílený materiál (i pro „Volný byt")
     let label=target.name||target.label;                       // když přišlo jen {lat,lon}, dohledej název z budovy
     if(!label){ const s=(m.userData.services||[]).find(ss=>ss.lat===target.lat&&ss.lon===target.lon); if(s) label=s.name||s.label; }
     const el=document.createElement('div'); el.className='pin hl dest-pin';
@@ -1557,22 +1494,31 @@ async function main(){
   }
   function drawRoutePath(rawPts){
     clearRouteMap();
+    lastRouteRaw = rawPts;
     const pts = simplifyXZ(rawPts, 2.5);                 // ubrat jitter → elegantní zaoblená čára
     const ctrl = pts.map(p=>new THREE.Vector3(p.x,0,p.z));
-    // A) plná ČERVENÁ čára — jistota viditelnosti (stejný osvědčený postup jako uzavírky)
+    const dTest = !routeOcclude;                          // occlude=true → depthTest true → budovy zastíní trasu
+    // A) plná ČERVENÁ čára
     routeMesh = new THREE.Mesh(ribbonCore(ctrl, 3.2, 0.6),
-      new THREE.MeshBasicMaterial({color:0xe23b3b, transparent:true, opacity:0.95, depthTest:false, depthWrite:false, side:THREE.DoubleSide}));
+      new THREE.MeshBasicMaterial({color:0xe23b3b, transparent:true, opacity:0.95, depthTest:dTest, depthWrite:false, side:THREE.DoubleSide}));
     routeMesh.renderOrder = 5; scene.add(routeMesh);
-    // B) plynoucí bílé ŠIPKY přes čáru (textura s alfa)
+    // B) plynoucí bílé ŠIPKY přes čáru (ribbonCore s UV)
     routeTex = routeTex || makeChevTex();
-    routeArrows = new THREE.Mesh(routeGeom(pts, 3.2, 0.62),
-      new THREE.MeshBasicMaterial({map:routeTex, transparent:true, depthTest:false, depthWrite:false, side:THREE.DoubleSide}));
+    routeArrows = new THREE.Mesh(ribbonCore(ctrl, 3.2, 0.62, 2, true, 15),
+      new THREE.MeshBasicMaterial({map:routeTex, transparent:true, depthTest:dTest, depthWrite:false, side:THREE.DoubleSide}));
     routeArrows.renderOrder = 6; scene.add(routeArrows);
+    // C) GHOST — jen v occlude režimu: slabá čára VŽDY navrch (skrz budovy), ať neztratíš směr
+    if(routeOcclude){
+      routeGhost = new THREE.Mesh(ribbonCore(ctrl, 2.2, 0.62),
+        new THREE.MeshBasicMaterial({color:0xe23b3b, transparent:true, opacity:0.20, depthTest:false, depthWrite:false, side:THREE.DoubleSide}));
+      routeGhost.renderOrder = 4; scene.add(routeGhost);
+    }
     const end=pts[pts.length-1];
     routeMarker=new THREE.Mesh(new THREE.SphereGeometry(1.5,14,12), new THREE.MeshBasicMaterial({color:0xe23b3b, depthTest:false}));
     routeMarker.renderOrder = 7; routeMarker.position.set(end.x, elevAt(end.x,end.z)+2.5, end.z); scene.add(routeMarker);
     const cn=document.getElementById('cancelNav'); if(cn) cn.classList.add('show');   // ukázat „Ukončit navigaci"
   }
+  function setRouteOcclude(on){ routeOcclude=!!on; if(routeMesh && lastRouteRaw) drawRoutePath(lastRouteRaw); }   // přepínač „za budovami"
   updaters.push(dt=>{ if(routeTex && routeArrows) routeTex.offset.x -= dt*0.22; });   // pomalu plynoucí šipky k cíli
   const poiToXZ = p => ({x:projX(p.lon), z:projZ(p.lat)});
   // marker „vy jste tady" (origin trasy)
@@ -1620,6 +1566,7 @@ async function main(){
   // „Navigovat" z POI karty → naše trasa (ne Google)
   window.__mapNav = (lat,lon)=>{ if(window.MapAPI) MapAPI.routeTo({lat,lon}); hideDetail(); };
   { const cn=document.getElementById('cancelNav'); if(cn) cn.onclick=()=>MapAPI.reset(); }   // zruší trasu + cíl + zpět na výchozí pohled
+  { const oc=document.getElementById('routeOccCk'); if(oc) oc.onchange=e=>setRouteOcclude(e.target.checked); }   // trasa za budovami ano/ne
 
   // === VYHLEDÁVÁNÍ + TRASA (UI nad MapAPI) — vpravo dole ===
   (function initSearch(){
