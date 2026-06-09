@@ -1477,15 +1477,26 @@ async function main(){
     if(s!==t && !prev.has(t)) return null;
     const pts=[]; let u=t, guard=0; while(u!=null && guard++<5000){ const p=gXZ.get(u); pts.push({x:p.x,z:p.z}); if(u===s) break; u=prev.get(u); }
     pts.reverse();
-    return { pts:[{x:from.x,z:from.z}, ...pts, {x:to.x,z:to.z}], dist:dist.get(t)||0 };
+    // konec na posledním uličním uzlu (= před budovou), NE až do cíle; cíl vracím zvlášť pro nadhled
+    return { pts:[{x:from.x,z:from.z}, ...pts], dist:dist.get(t)||0, dest:{x:to.x,z:to.z} };
+  }
+  // zjednodušení trasy (Douglas–Peucker) → ubere jitter, spline pak udělá elegantní zaoblení
+  function simplifyXZ(p, tol){
+    if(p.length<3) return p.slice(); const sq=tol*tol;
+    const keep=new Array(p.length).fill(false); keep[0]=keep[p.length-1]=true; const st=[[0,p.length-1]];
+    while(st.length){ const [a,b]=st.pop(); const ax=p[a].x,az=p[a].z,dx=p[b].x-ax,dz=p[b].z-az,len=dx*dx+dz*dz||1;
+      let idx=-1,md=0;
+      for(let i=a+1;i<b;i++){ const tt=((p[i].x-ax)*dx+(p[i].z-az)*dz)/len, qx=ax+tt*dx,qz=az+tt*dz, d=(p[i].x-qx)**2+(p[i].z-qz)**2; if(d>md){md=d;idx=i;} }
+      if(md>sq && idx>0){ keep[idx]=true; st.push([a,idx],[idx,b]); } }
+    return p.filter((_,i)=>keep[i]);
   }
   let routeMesh=null, routeArrows=null, routeMarker=null, routeTex=null;
   // šipková textura — PRŮHLEDNÉ pozadí + bílý chevron ">" k cíli (kreslí se PŘES červenou čáru)
   function makeChevTex(){
     const cv=document.createElement('canvas'); cv.width=64; cv.height=64; const c=cv.getContext('2d');
     c.clearRect(0,0,64,64);
-    c.strokeStyle='rgba(255,255,255,0.95)'; c.lineWidth=12; c.lineCap='round'; c.lineJoin='round';
-    c.beginPath(); c.moveTo(19,14); c.lineTo(46,32); c.lineTo(19,50); c.stroke();   // ">" = směr k cíli (+u)
+    c.strokeStyle='rgba(255,255,255,0.9)'; c.lineWidth=6; c.lineCap='round'; c.lineJoin='round';
+    c.beginPath(); c.moveTo(27,20); c.lineTo(40,32); c.lineTo(27,44); c.stroke();   // menší, tenčí, otevřenější ">" k cíli
     const t=new THREE.CanvasTexture(cv); t.wrapS=THREE.RepeatWrapping; t.wrapT=THREE.ClampToEdgeWrapping; return t;
   }
   // geometrie trasy s UV: u = vzdálenost/TILE (opakování šipek), v napříč pruhem
@@ -1493,7 +1504,7 @@ async function main(){
     const ctrl=pts.map(p=>new THREE.Vector3(p.x,0,p.z)); if(ctrl.length<2) return new THREE.BufferGeometry();
     const curve=new THREE.CatmullRomCurve3(ctrl,false,'centripetal');
     const n=Math.max(2,Math.ceil(curve.getLength()/2)); const C=curve.getPoints(n);
-    const hw=width/2, TILE=7, yy=(x,z)=>elevAt(x,z)+off;
+    const hw=width/2, TILE=11, yy=(x,z)=>elevAt(x,z)+off;   // větší rozteč šipek (méně husté)
     const L=[0]; for(let i=1;i<C.length;i++) L[i]=L[i-1]+Math.hypot(C[i].x-C[i-1].x, C[i].z-C[i-1].z);
     const left=[],right=[];
     for(let i=0;i<C.length;i++){ const a=C[Math.max(0,i-1)],b=C[Math.min(C.length-1,i+1)];
@@ -1533,21 +1544,22 @@ async function main(){
     destPin={ x:m.userData.cx, z:m.userData.cz, y:(m.userData.topY||10)+6, el, visible:true, cls:'hl' };
     PINS.push(destPin);
   }
-  function drawRoutePath(pts){
+  function drawRoutePath(rawPts){
     clearRouteMap();
+    const pts = simplifyXZ(rawPts, 2.5);                 // ubrat jitter → elegantní zaoblená čára
     const ctrl = pts.map(p=>new THREE.Vector3(p.x,0,p.z));
     // A) plná ČERVENÁ čára — jistota viditelnosti (stejný osvědčený postup jako uzavírky)
-    routeMesh = new THREE.Mesh(ribbonCore(ctrl, 3.8, 0.6),
+    routeMesh = new THREE.Mesh(ribbonCore(ctrl, 3.2, 0.6),
       new THREE.MeshBasicMaterial({color:0xe23b3b, transparent:true, opacity:0.95, depthTest:false, depthWrite:false, side:THREE.DoubleSide}));
     routeMesh.renderOrder = 5; scene.add(routeMesh);
     // B) plynoucí bílé ŠIPKY přes čáru (textura s alfa)
     routeTex = routeTex || makeChevTex();
-    routeArrows = new THREE.Mesh(routeGeom(pts, 3.8, 0.6),
+    routeArrows = new THREE.Mesh(routeGeom(pts, 3.2, 0.62),
       new THREE.MeshBasicMaterial({map:routeTex, transparent:true, depthTest:false, depthWrite:false, side:THREE.DoubleSide}));
     routeArrows.renderOrder = 6; scene.add(routeArrows);
     const end=pts[pts.length-1];
-    routeMarker=new THREE.Mesh(new THREE.SphereGeometry(1.7,14,12), new THREE.MeshBasicMaterial({color:0xe23b3b, depthTest:false}));
-    routeMarker.renderOrder = 7; routeMarker.position.set(end.x, elevAt(end.x,end.z)+3, end.z); scene.add(routeMarker);
+    routeMarker=new THREE.Mesh(new THREE.SphereGeometry(1.5,14,12), new THREE.MeshBasicMaterial({color:0xe23b3b, depthTest:false}));
+    routeMarker.renderOrder = 7; routeMarker.position.set(end.x, elevAt(end.x,end.z)+2.5, end.z); scene.add(routeMarker);
   }
   updaters.push(dt=>{ if(routeTex && routeArrows) routeTex.offset.x -= dt*0.22; });   // pomalu plynoucí šipky k cíli
   const poiToXZ = p => ({x:projX(p.lon), z:projZ(p.lat)});
@@ -1581,9 +1593,9 @@ async function main(){
       const r = routePath(from, to); if(!r) return null;
       drawRoutePath(r.pts);
       highlightDest(target);                                  // cíl oranžově + pin nad ním
-      // NÁHLED ZE SHORA: zarámovat celou trasu (oba konce), ne zoom na cíl
+      // NÁHLED ZE SHORA: zarámovat celou trasu + cíl (budovu), ne zoom na cíl
       let minx=1e9,maxx=-1e9,minz=1e9,maxz=-1e9;
-      for(const p of r.pts){ if(p.x<minx)minx=p.x; if(p.x>maxx)maxx=p.x; if(p.z<minz)minz=p.z; if(p.z>maxz)maxz=p.z; }
+      for(const p of (r.dest?[...r.pts,r.dest]:r.pts)){ if(p.x<minx)minx=p.x; if(p.x>maxx)maxx=p.x; if(p.z<minz)minz=p.z; if(p.z>maxz)maxz=p.z; }
       const cx=(minx+maxx)/2, cz=(minz+maxz)/2, span=Math.max(maxx-minx, maxz-minz, 40);
       const D=span*3.3+70;   // FOV 18° → potřeba ~3,2× span, ať se vejde celá trasa (méně zoomu)
       if(flyToCamera) flyToCamera(new THREE.Vector3(cx, D*0.9, cz + D*0.34), new THREE.Vector3(cx, 0, cz), 950);
