@@ -198657,17 +198657,19 @@ function buildTerrain(T, tex){
   for(let r=0;r<Hg-1;r++)for(let c=0;c<Wg-1;c++){const a=r*Wg+c,b=r*Wg+c+1,d=(r+1)*Wg+c,e=(r+1)*Wg+c+1;idx.push(a,d,b,b,d,e);}
   const tg=new THREE.BufferGeometry();tg.setAttribute('position',new THREE.BufferAttribute(verts,3));tg.setAttribute('uv',new THREE.BufferAttribute(uvs,2));tg.setIndex(idx);tg.computeVertexNormals();
   const top=new THREE.Mesh(tg,new THREE.MeshStandardMaterial(tex?{map:tex,roughness:1,side:THREE.DoubleSide}:{color:COL.ground,roughness:1,side:THREE.DoubleSide}));top.receiveShadow=true;grp.add(top);
-  // stěny + dno → blok s tloušťkou, ostrá hrana; tloušťka škáluje s velikostí výřezu (Tier 1: 2 km → BASE≈-140)
+  // stěny + dno → blok s tloušťkou, ostrá hrana; tloušťka škáluje s velikostí výřezu
+  // (Tier 1: 2 km → BASE≈-70; menší faktor 0.035 ať dno není tak hluboko že stěny visuálně splývají s pozadím)
   const _ll=vAt(0,0), _ur=vAt(Wg-1,Hg-1);
   const _span=Math.max(Math.abs(_ur[0]-_ll[0]), Math.abs(_ur[2]-_ll[2]));
-  const BASE=-Math.max(46, _span*0.07), wp=[], edge=[];
+  const BASE=-Math.max(46, _span*0.035), wp=[], edge=[];
   for(let c=0;c<Wg;c++)edge.push([c,0]); for(let r=1;r<Hg;r++)edge.push([Wg-1,r]);
   for(let c=Wg-2;c>=0;c--)edge.push([c,Hg-1]); for(let r=Hg-2;r>=1;r--)edge.push([0,r]); edge.push(edge[0]);
   for(let i=0;i<edge.length-1;i++){const A=vAt(edge[i][0],edge[i][1]),B=vAt(edge[i+1][0],edge[i+1][1]);
     wp.push(A[0],A[1],A[2], A[0],BASE,A[2], B[0],B[1],B[2],  B[0],B[1],B[2], A[0],BASE,A[2], B[0],BASE,B[2]);}
   const wg=new THREE.BufferGeometry();wg.setAttribute('position',new THREE.Float32BufferAttribute(wp,3));wg.computeVertexNormals();
-  // boky podstavce: MeshStandardMaterial → reaguje na ambient/hemi → v noci ztmavne samy
-  const plinthMat = new THREE.MeshStandardMaterial({color:COL.plinth,roughness:1,side:THREE.DoubleSide});
+  // boky podstavce: MeshStandardMaterial s emissive → samosvětlení, takže stěny nesplývají s pozadím
+  // (předtím čistý lambert → vyšší stěny u Tier 1 byly skoro neviditelné kvůli slunci shora)
+  const plinthMat = new THREE.MeshStandardMaterial({color:COL.plinth,roughness:1,emissive:COL.plinth,emissiveIntensity:0.45,side:THREE.DoubleSide});
   grp.add(new THREE.Mesh(wg, plinthMat));
   const A=vAt(0,0),B=vAt(Wg-1,0),C=vAt(Wg-1,Hg-1),D=vAt(0,Hg-1);
   const bp=[A[0],BASE,A[2], C[0],BASE,C[2], B[0],BASE,B[2],  A[0],BASE,A[2], D[0],BASE,D[2], C[0],BASE,C[2]];
