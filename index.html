@@ -198351,11 +198351,13 @@ renderer.clippingPlanes=CLIP;
 
 const scene=new THREE.Scene(); scene.background=new THREE.Color(COL.bg);
 let W=innerWidth,H=innerHeight,aspect=W/H;
-const camera=new THREE.PerspectiveCamera(18,aspect,1,12000);
-// default pohled škáluje s velikostí výřezu (CAM_SCALE ≈ 1 pro 600 m, ≈ 3.3 pro 2 km výřez)
+const camera=new THREE.PerspectiveCamera(18,aspect,1,30000);
+// default vzdálenost kamery = výřez × 3.8 (FOV 18° → viewport 1.2× výřezu = vidět celý + 20% rezerva)
+// Pro 600 m: dist = 2280 (původní 1211 byl close-up zoom na centrum). Pro 2 km: dist = 7600.
 const _bSpan=Math.max((BBOX.e-BBOX.w)*mPerLon,(BBOX.n-BBOX.s)*mPerLat);
-const CAM_SCALE=Math.max(1, _bSpan/600);
-camera.position.set(430*CAM_SCALE, 780*CAM_SCALE, 820*CAM_SCALE); camera.lookAt(0,0,0);
+const _camDist=Math.max(1211, _bSpan*3.8);
+const _kx=430/1211, _ky=780/1211, _kz=820/1211;   // původní směr kamery, jen škálovaný
+camera.position.set(_kx*_camDist, _ky*_camDist, _kz*_camDist); camera.lookAt(0,0,0);
 const controls=new OrbitControls(camera,canvas);
 controls.enableDamping=true; controls.dampingFactor=0.09; controls.rotateSpeed=0.65; controls.zoomSpeed=0.7; controls.panSpeed=0.7;   // klidnější, přirozenější pocit
 controls.maxPolarAngle=Math.PI*0.49; controls.enablePan=true;
