@@ -198657,8 +198657,10 @@ function buildTerrain(T, tex){
   for(let r=0;r<Hg-1;r++)for(let c=0;c<Wg-1;c++){const a=r*Wg+c,b=r*Wg+c+1,d=(r+1)*Wg+c,e=(r+1)*Wg+c+1;idx.push(a,d,b,b,d,e);}
   const tg=new THREE.BufferGeometry();tg.setAttribute('position',new THREE.BufferAttribute(verts,3));tg.setAttribute('uv',new THREE.BufferAttribute(uvs,2));tg.setIndex(idx);tg.computeVertexNormals();
   const top=new THREE.Mesh(tg,new THREE.MeshStandardMaterial(tex?{map:tex,roughness:1,side:THREE.DoubleSide}:{color:COL.ground,roughness:1,side:THREE.DoubleSide}));top.receiveShadow=true;grp.add(top);
-  // stěny + dno → blok s tloušťkou, ostrá hrana
-  const BASE=-46, wp=[], edge=[];
+  // stěny + dno → blok s tloušťkou, ostrá hrana; tloušťka škáluje s velikostí výřezu (Tier 1: 2 km → BASE≈-140)
+  const _ll=vAt(0,0), _ur=vAt(Wg-1,Hg-1);
+  const _span=Math.max(Math.abs(_ur[0]-_ll[0]), Math.abs(_ur[2]-_ll[2]));
+  const BASE=-Math.max(46, _span*0.07), wp=[], edge=[];
   for(let c=0;c<Wg;c++)edge.push([c,0]); for(let r=1;r<Hg;r++)edge.push([Wg-1,r]);
   for(let c=Wg-2;c>=0;c--)edge.push([c,Hg-1]); for(let r=Hg-2;r>=1;r--)edge.push([0,r]); edge.push(edge[0]);
   for(let i=0;i<edge.length-1;i++){const A=vAt(edge[i][0],edge[i][1]),B=vAt(edge[i+1][0],edge[i+1][1]);
@@ -199349,7 +199351,10 @@ async function main(){
 
   document.getElementById('loading').style.display='none';
   document.getElementById('panel').style.display='block';
-  document.getElementById('panelSub').textContent=`${BLD.buildings.length} budov · ~600 m · ČÚZK + OSM`;
+  // velikost výřezu (km) dynamicky z bboxu — v hlavičce panelu
+  const _spanKm=Math.max((TER.bbox.e-TER.bbox.w)*mPerLon,(TER.bbox.n-TER.bbox.s)*mPerLat)/1000;
+  const _spanStr=_spanKm<1.2?`~${Math.round(_spanKm*1000)} m`:`~${_spanKm.toFixed(1)} km`;
+  document.getElementById('panelSub').textContent=`${BLD.buildings.length} budov · ${_spanStr} · ČÚZK + OSM`;
 
   // === MapAPI — ovládání mapy pro chatbota (vrstvy / vyhledávání / zoom / TRASA) ============
   // Pěší routovací graf z OSM cest (klientsky, offline). Uzel = OSM node ID, hrana = úsek cesty.
