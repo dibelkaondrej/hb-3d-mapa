@@ -198361,6 +198361,9 @@ camera.position.set(_kx*_camDist, _ky*_camDist, _kz*_camDist); camera.lookAt(0,0
 const controls=new OrbitControls(camera,canvas);
 controls.enableDamping=true; controls.dampingFactor=0.09; controls.rotateSpeed=0.65; controls.zoomSpeed=0.7; controls.panSpeed=0.7;   // klidnější, přirozenější pocit
 controls.maxPolarAngle=Math.PI*0.49; controls.enablePan=true;
+// zoom limity škálují s výřezem: zoom in ne pod blízko terénu, zoom out ne nekonečně daleko
+controls.minDistance=Math.max(80, _bSpan*0.04);     // ~80 m pro 600m bbox, ~80 m pro 2 km bbox (close-up na detail)
+controls.maxDistance=Math.max(2500, _bSpan*5);      // 2500 pro 600m, 10000 pro 2 km (celý výřez + rezerva)
 controls.mouseButtons={LEFT:THREE.MOUSE.ROTATE, MIDDLE:THREE.MOUSE.PAN, RIGHT:null};   // levé=otáčení, držené kolečko=posun, pravé=nic
 canvas.addEventListener('contextmenu',e=>e.preventDefault());
 
@@ -198746,7 +198749,9 @@ async function main(){
     const {w:Wg,h:Hg,grid}=TER; let mn=1e9,mx=-1e9; for(const row of grid)for(const v of row){if(v<mn)mn=v;if(v>mx)mx=v;}
     const gp=(c,r)=>{const lon=TER.bbox.w+c/(Wg-1)*(TER.bbox.e-TER.bbox.w),lat=TER.bbox.n-r/(Hg-1)*(TER.bbox.n-TER.bbox.s);return toPx(lon,lat);};
     cx2.strokeStyle=hex(COL.contour); cx2.globalAlpha=0.5; cx2.lineWidth=Math.max(1,0.5*pxM);
-    for(let L=Math.ceil(mn/2)*2;L<mx;L+=2){for(let r=0;r<Hg-1;r++)for(let c=0;c<Wg-1;c++){
+    // krok vrstevnic adaptivně podle výškového rozsahu (Tier 1: 88 m / 2 m = 44 čar → nepřehledné)
+    const _hRange=mx-mn, _cStep=_hRange<40?2:(_hRange<100?5:10);
+    for(let L=Math.ceil(mn/_cStep)*_cStep;L<mx;L+=_cStep){for(let r=0;r<Hg-1;r++)for(let c=0;c<Wg-1;c++){
       const v=[grid[r][c],grid[r][c+1],grid[r+1][c+1],grid[r+1][c]],pp=[[c,r],[c+1,r],[c+1,r+1],[c,r+1]],cr=[];
       for(let k=0;k<4;k++){const a=v[k],b=v[(k+1)%4];if((a<L)!==(b<L)){const tt=(L-a)/(b-a),pa=pp[k],pb=pp[(k+1)%4];cr.push([pa[0]+(pb[0]-pa[0])*tt,pa[1]+(pb[1]-pa[1])*tt]);}}
       if(cr.length===2){const A=gp(cr[0][0],cr[0][1]),B=gp(cr[1][0],cr[1][1]);cx2.beginPath();cx2.moveTo(A[0],A[1]);cx2.lineTo(B[0],B[1]);cx2.stroke();}}}
