@@ -808,7 +808,7 @@ async function main(){
     if(e.type!=='way'||!e.geometry) continue; const t=e.tags||{}; if('building'in t)continue;
     if('highway'in t){const st=roadStyle(t);(st.c===COL.path?pathW:roadW).push({g:e.geometry,w:st.w});
       if(st.drive)driveRoads.push(localPts(e.geometry)); else if(st.c===COL.path)walkPaths.push(localPts(e.geometry)); nR++;}
-    else if(t.natural==='water'&&isClosed(e.geometry)){waterW.push(e.geometry);const _wp=localPts(e.geometry);waterPolys.push({pts:_wp,area:polyArea(_wp)});nW++;}
+    else if(t.natural==='water'&&isClosed(e.geometry)){waterW.push(e.geometry);const _wp=localPts(e.geometry);waterPolys.push({pts:_wp,area:polyArea(_wp),osmId:e.id,name:t.name||null});nW++;}
     else if('waterway'in t){wwW.push({g:e.geometry,w:(t.waterway==='river')?14:(t.waterway==='stream'?3:7)});nW++;}
     else if(('landuse'in t||'leisure'in t||t.natural==='wood')&&isClosed(e.geometry)){greenW.push(e.geometry);const pts=localPts(e.geometry);greenPolys.push({pts,area:polyArea(pts)});nG++;}
   }
@@ -1022,6 +1022,7 @@ async function main(){
   for(const wp of waterPolys){
     if(wp.pts.length<3) continue;
     if(wp.area<MIN_PLANAR_WATER||wp.area>MAX_PLANAR_WATER) continue;   // skip drobné chyby + obří suspect polygons
+    console.log(`💧 water planar mesh: area=${Math.round(wp.area)} m², osmId=${wp.osmId||'?'}, name=${wp.name||'?'}, pts=${wp.pts.length}`);
     // medián elevAt v polygonu (robustní proti outlierům na okraji)
     const hs=wp.pts.map(p=>elevAt(p.x,p.z)).sort((a,b)=>a-b);
     const wy=hs[Math.floor(hs.length/2)]+0.25;     // +0.25 m nad terén (texture vody se schová pod)
