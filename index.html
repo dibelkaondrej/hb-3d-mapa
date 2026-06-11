@@ -808,7 +808,7 @@ async function main(){
     if(e.type!=='way'||!e.geometry) continue; const t=e.tags||{}; if('building'in t)continue;
     if('highway'in t){const st=roadStyle(t);(st.c===COL.path?pathW:roadW).push({g:e.geometry,w:st.w});
       if(st.drive)driveRoads.push(localPts(e.geometry)); else if(st.c===COL.path)walkPaths.push(localPts(e.geometry)); nR++;}
-    else if(t.natural==='water'&&isClosed(e.geometry)){waterW.push(e.geometry);const _wp=localPts(e.geometry);waterPolys.push({pts:_wp,area:polyArea(_wp),osmId:e.id,name:t.name||null});nW++;}
+    else if(t.natural==='water'&&isClosed(e.geometry)&&t.name){waterW.push(e.geometry);const _wp=localPts(e.geometry);waterPolys.push({pts:_wp,area:polyArea(_wp),osmId:e.id,name:t.name});nW++;}    /* jen pojmenované rybníky → textura + planar mesh; anonymní zcela ignorovány */
     else if('waterway'in t){wwW.push({g:e.geometry,w:(t.waterway==='river')?14:(t.waterway==='stream'?3:7)});nW++;}
     else if(('landuse'in t||'leisure'in t||t.natural==='wood')&&isClosed(e.geometry)){greenW.push(e.geometry);const pts=localPts(e.geometry);greenPolys.push({pts,area:polyArea(pts)});nG++;}
   }
@@ -1022,13 +1022,19 @@ async function main(){
   for(const wp of waterPolys){
     if(wp.pts.length<3) continue;
     if(wp.area<MIN_PLANAR_WATER||wp.area>MAX_PLANAR_WATER) continue;   // skip drobné chyby + obří suspect polygons
-    if(!wp.name) continue;                                              // jen pojmenované rybníky → planar mesh; anonymní nech jako texturu (bezpečnější default)
     window.__waters=window.__waters||[]; window.__waters.push({osm:wp.osmId, name:wp.name, area:Math.round(wp.area), pts:wp.pts.length, cx:Math.round(wp.pts.reduce((s,p)=>s+p.x,0)/wp.pts.length), cz:Math.round(wp.pts.reduce((s,p)=>s+p.z,0)/wp.pts.length)});
     // medián elevAt v polygonu (robustní proti outlierům na okraji)
     const hs=wp.pts.map(p=>elevAt(p.x,p.z)).sort((a,b)=>a-b);
     const wy=hs[Math.floor(hs.length/2)]+0.25;     // +0.25 m nad terén (texture vody se schová pod)
-    const shp=new THREE.Shape(); wp.pts.forEach((p,i)=>i?shp.lineTo(p.x,p.z):shp.moveTo(p.x,p.z));
-    const wgeo=new THREE.ShapeGeometry(shp); wgeo.rotateX(-Math.PI/2);   // Shape je X-Y → X-Z
+    // earcut triangulace (přes ShapeUtils) místo ShapeGeometry — pro non-convex polygons (Hastrman 42 vrcholů NON-convex)
+    const contour=wp.pts.map(p=>new THREE.Vector2(p.x, p.z));
+    const tris=THREE.ShapeUtils.triangulateShape(contour, []);
+    const verts=new Float32Array(contour.length*3);
+    for(let i=0;i<contour.length;i++){ verts[i*3]=contour[i].x; verts[i*3+1]=0; verts[i*3+2]=contour[i].y; }
+    const idx=[]; for(const t of tris) idx.push(t[0], t[1], t[2]);
+    const wgeo=new THREE.BufferGeometry();
+    wgeo.setAttribute('position', new THREE.BufferAttribute(verts, 3));
+    wgeo.setIndex(idx); wgeo.computeVertexNormals();
     const wmesh=new THREE.Mesh(wgeo,waterMat); wmesh.position.y=wy; wmesh.receiveShadow=true; scene.add(wmesh);
     wp.waterY=wy;     // ulož pro kachny — plovou na hladině, ne po terénu
   }
