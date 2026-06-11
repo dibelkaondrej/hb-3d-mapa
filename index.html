@@ -1022,7 +1022,7 @@ async function main(){
   for(const wp of waterPolys){
     if(wp.pts.length<3) continue;
     if(wp.area<MIN_PLANAR_WATER||wp.area>MAX_PLANAR_WATER) continue;   // skip drobné chyby + obří suspect polygons
-    console.log(`💧 water planar mesh: area=${Math.round(wp.area)} m², osmId=${wp.osmId||'?'}, name=${wp.name||'?'}, pts=${wp.pts.length}`);
+    window.__waters=window.__waters||[]; window.__waters.push({osm:wp.osmId, name:wp.name, area:Math.round(wp.area), pts:wp.pts.length, cx:Math.round(wp.pts.reduce((s,p)=>s+p.x,0)/wp.pts.length), cz:Math.round(wp.pts.reduce((s,p)=>s+p.z,0)/wp.pts.length)});
     // medián elevAt v polygonu (robustní proti outlierům na okraji)
     const hs=wp.pts.map(p=>elevAt(p.x,p.z)).sort((a,b)=>a-b);
     const wy=hs[Math.floor(hs.length/2)]+0.25;     // +0.25 m nad terén (texture vody se schová pod)
