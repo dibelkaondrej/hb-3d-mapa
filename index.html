@@ -112811,12 +112811,15 @@ async function main(){
       }
     });
   }
-  // 3) Kamera: Havlíčkovo náměstí — oficiální YouTube live stream (TIC města). Vrstva „📹 Kamery".
-  addPin(8, -165, 12, '📹 Náměstí — kamera<small>živý přenos</small>', {
+  // 3) Kamera: na Staré radnici (RÚIAN 24586277, střecha ~24 m), záběr na Havlíčkovo náměstí.
+  // Embed PŘÍMO v kartě zatím NEJDE: kanál má vypnuté vkládání (playableInEmbed:false, embed → „Chyba 153").
+  // Až město/TIC povolí vkládání v YouTube Studiu → nahradit placeholder iframem
+  // `https://www.youtube.com/embed/live_stream?channel=UC8eRoWTPlxALM729Vm854sA` (vždy aktuální live, rotace ID nevadí).
+  addPin(-71, -38, 27, '📹 Náměstí — kamera<small>živý přenos</small>', {
     cls:'camera',
     detail:{
       title:'Havlíčkovo náměstí — živě',
-      subtitle:'Oficiální kamera města (TIC)',
+      subtitle:'Kamera na Staré radnici (TIC)',
       color:'#2f6fc7',
       // odkaz na kanálový /live → vždy aktuální přenos (živé ID rotuje, /live nikdy nezmrtví)
       body:`<a class="card-cam-link" href="https://www.youtube.com/channel/UC8eRoWTPlxALM729Vm854sA/live" target="_blank" rel="noopener">
@@ -112827,8 +112830,8 @@ async function main(){
             <span class="cam-play">▶</span>
           </div>
         </a>
-        <div class="dtl-row"><span>Zdroj</span><span>Město HB · YouTube live</span></div>
-        <div class="dtl-row"><span>Záběr</span><span>Morový sloup · kostel</span></div>`,
+        <div class="dtl-row"><span>Umístění</span><span>Stará radnice</span></div>
+        <div class="dtl-row"><span>Záběr</span><span>náměstí · Morový sloup · kostel</span></div>`,
       link:'https://www.youtube.com/channel/UC8eRoWTPlxALM729Vm854sA/live',
       linkText:'Otevřít živý přenos'
     }
