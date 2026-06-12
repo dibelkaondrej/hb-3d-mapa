@@ -112305,6 +112305,32 @@ async function main(){
     else if('waterway'in t){wwW.push({g:e.geometry,w:(t.waterway==='river')?14:(t.waterway==='stream'?3:7)});nW++;}
     else if(('landuse'in t||'leisure'in t||t.natural==='wood')&&isClosed(e.geometry)){greenW.push(e.geometry);const pts=localPts(e.geometry);greenPolys.push({pts,area:polyArea(pts)});nG++;}
   }
+
+  // === CARVE terénu pod rybníky → zaručeně ROVNÁ hladina ==================
+  // DMR pod vodní hladinou je šumivý (LiDAR se od vody špatně odráží → falešné vysoké hodnoty uvnitř rybníka).
+  // Pro každý rybník: water_level = nízký percentil výšek terénu uvnitř (= skutečná hladina, ignoruje šum nahoře),
+  // pak srovnej všechny grid vrcholy uvnitř na ≤ water_level (vyřízne basin). Hladina pak nikde neprokukuje.
+  // Běží PŘED drawGround (vrstevnice/textura) i buildTerrain (mesh) i elevAt → vše konzistentní.
+  (function carveWater(){
+    const {w:Wg,h:Hg,grid,bbox}=TER;
+    const cellXZ=(c,r)=>{ const lon=bbox.w+c/(Wg-1)*(bbox.e-bbox.w), lat=bbox.n-r/(Hg-1)*(bbox.n-bbox.s); return {x:projX(lon),z:projZ(lat)}; };
+    for(const wp of waterPolys){
+      if(wp.pts.length<3 || wp.area<50 || wp.area>200000) continue;
+      let xmin=1e9,xmax=-1e9,zmin=1e9,zmax=-1e9; wp.pts.forEach(p=>{xmin=Math.min(xmin,p.x);xmax=Math.max(xmax,p.x);zmin=Math.min(zmin,p.z);zmax=Math.max(zmax,p.z);});
+      const cells=[], hs=[];
+      for(let r=0;r<Hg;r++)for(let c=0;c<Wg;c++){
+        const q=cellXZ(c,r);
+        if(q.x<xmin||q.x>xmax||q.z<zmin||q.z>zmax) continue;
+        if(pointInPoly(q.x,q.z,wp.pts)){ cells.push([r,c]); hs.push(grid[r][c]); }
+      }
+      if(hs.length<3) continue;
+      hs.sort((a,b)=>a-b);
+      const level=hs[Math.floor(hs.length*0.30)];   // p30 = robustní hladina (pod šumem nahoře, nad dnem)
+      wp.waterY = level + 0.3;                        // planar mesh sedne sem
+      for(const [r,c] of cells){ if(grid[r][c] > level-0.5) grid[r][c] = level-0.5; }   // carve DOLŮ (nikdy nahoru)
+    }
+  })();
+
   // překreslitelná funkce — volá se znova při sezónní změně, aby tráva/voda chytly novou paletu
   function drawGround(){
     cx2.fillStyle=hex(COL.ground); cx2.fillRect(0,0,CT,CT);
@@ -112506,20 +112532,17 @@ async function main(){
     const walk=rand()<0.6,speed=0.8+rand()*0.7,dir0=rand()<0.5?-1:1,phase=rand()*6.28;let dd=rand()*path.total;
     updaters.push(dt=>{if(walk)dd+=dt*speed*dir0;const r=posOnPath(path,dd);if(!r)return;const bob=Math.abs(Math.sin(phase+clock.elapsedTime*4))*0.06;person.position.set(r.p.x,elevAt(r.p.x,r.p.z)+0.85+bob,r.p.z);});}
 
-  // --- hladina rybníků (planární mesh, ne textura na terénu) ------------
-  // bez tohohle voda kopírovala vrstevnice (textura na sklonu) → rybník vypadal jak by tekl do svahu.
-  // 1 mesh na rybník na výšce = medián výšky terénu uvnitř půdorysu (+ε proti z-fight s texturou).
-  // Filter: jen typické rybníky (50 m² – 1.5 ha); větší polygony nech jen jako texturu (často OSM fake/řeka).
-  const MIN_PLANAR_WATER = 50, MAX_PLANAR_WATER = 15000;
-  const waterMat=new THREE.MeshStandardMaterial({color:COL.water,roughness:0.35,metalness:0.05,transparent:true,opacity:0.92,side:THREE.DoubleSide});
+  // --- hladina rybníků (planární mesh nad VYŘÍZNUTÝM terénem) ------------
+  // Terén pod rybníkem je už vyříznutý carveWater() na rovinu ≤ water_level → hladina nikde neprokukuje.
+  // Výška = wp.waterY (z carvingu = p30 interiéru + 0.3). Mesh je earcut (non-convex Hastrman).
+  // Filter: jen typické rybníky (50 m² – 1.5 ha); větší polygony nech jen jako texturu.
+  const MIN_PLANAR_WATER = 50, MAX_PLANAR_WATER = 200000;
+  const waterMat=new THREE.MeshStandardMaterial({color:COL.water,roughness:0.35,metalness:0.05,transparent:true,opacity:0.95,side:THREE.DoubleSide});
   for(const wp of waterPolys){
-    if(wp.pts.length<3) continue;
-    if(wp.area<MIN_PLANAR_WATER||wp.area>MAX_PLANAR_WATER) continue;   // skip drobné chyby + obří suspect polygons
-    window.__waters=window.__waters||[]; window.__waters.push({osm:wp.osmId, name:wp.name, area:Math.round(wp.area), pts:wp.pts.length, cx:Math.round(wp.pts.reduce((s,p)=>s+p.x,0)/wp.pts.length), cz:Math.round(wp.pts.reduce((s,p)=>s+p.z,0)/wp.pts.length)});
-    // medián elevAt v polygonu (robustní proti outlierům na okraji)
-    const hs=wp.pts.map(p=>elevAt(p.x,p.z)).sort((a,b)=>a-b);
-    const wy=hs[Math.floor(hs.length/2)]+0.25;     // +0.25 m nad terén (texture vody se schová pod)
-    // earcut triangulace (přes ShapeUtils) místo ShapeGeometry — pro non-convex polygons (Hastrman 42 vrcholů NON-convex)
+    if(wp.pts.length<3 || wp.waterY===undefined) continue;            // waterY nastaví carveWater
+    if(wp.area<MIN_PLANAR_WATER||wp.area>MAX_PLANAR_WATER) continue;
+    window.__waters=window.__waters||[]; window.__waters.push({osm:wp.osmId, name:wp.name, area:Math.round(wp.area), waterY:+wp.waterY.toFixed(1)});
+    // earcut triangulace (přes ShapeUtils) — pro non-convex polygons (Hastrman 42 vrcholů NON-convex)
     const contour=wp.pts.map(p=>new THREE.Vector2(p.x, p.z));
     const tris=THREE.ShapeUtils.triangulateShape(contour, []);
     const verts=new Float32Array(contour.length*3);
@@ -112528,8 +112551,7 @@ async function main(){
     const wgeo=new THREE.BufferGeometry();
     wgeo.setAttribute('position', new THREE.BufferAttribute(verts, 3));
     wgeo.setIndex(idx); wgeo.computeVertexNormals();
-    const wmesh=new THREE.Mesh(wgeo,waterMat); wmesh.position.y=wy; wmesh.receiveShadow=true; scene.add(wmesh);
-    wp.waterY=wy;     // ulož pro kachny — plovou na hladině, ne po terénu
+    const wmesh=new THREE.Mesh(wgeo,waterMat); wmesh.position.y=wp.waterY; wmesh.receiveShadow=true; scene.add(wmesh);
   }
 
   // --- kachny na rybnících ----------------------------------------------
